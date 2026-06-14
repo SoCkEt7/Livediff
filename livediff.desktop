@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Livediff
-Comment=Real-time file monitoring with beautiful diff visualization
-Exec=livediff
-Icon=livediff
-Terminal=true
-Type=Application
-Categories=Development;TerminalEmulator;
-Keywords=diff;monitor;rust;tui;
