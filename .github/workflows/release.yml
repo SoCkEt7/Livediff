@@ -90,10 +90,9 @@ jobs:
           fi
 
       - name: Upload release archive
-        uses: taiki-e/upload-gh-release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.ASSET }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.ref_name }} "${{ env.ASSET }}" --clobber
 
   publish-crates:
     name: Publish to Crates.io
