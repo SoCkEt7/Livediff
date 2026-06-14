@@ -31,29 +31,38 @@ impl Component for HeaderComponent {
             .map(|p| p.file_name().unwrap_or_default().to_string_lossy().into_owned())
             .unwrap_or_else(|_| "Unknown".to_string());
 
-        let left_content = Line::from(vec![
-            Span::styled(
-                " ◈ LIVEDIFF ",
-                Style::default()
-                    .add_modifier(Modifier::BOLD)
-                    .fg(Color::Rgb(10, 10, 15))
-                    .bg(Palette::PRIMARY),
-            ),
-            Span::styled("", Style::default().fg(Palette::PRIMARY).bg(Color::Rgb(40, 40, 55))),
-            Span::styled(
-                format!("  {} ", cwd),
-                Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(40, 40, 55)),
-            ),
-            Span::styled("", Style::default().fg(Color::Rgb(40, 40, 55)).bg(status_color)),
-            Span::styled(
-                status_text,
-                Style::default()
-                    .fg(Color::Rgb(10, 10, 15))
-                    .bg(status_color)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("", Style::default().fg(status_color)),
-        ]);
+        let phase = (state.anim_frame as f32 * 0.08) % 1.0;
+        let mut left_spans = tui_shimmer::shimmer_spans_with_style_at_phase(
+            " ◈ LIVEDIFF ",
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .fg(Color::Rgb(10, 10, 15))
+                .bg(Palette::PRIMARY),
+            phase,
+        );
+        left_spans.push(Span::styled(
+            "",
+            Style::default().fg(Palette::PRIMARY).bg(Color::Rgb(40, 40, 55)),
+        ));
+        left_spans.push(Span::styled(
+            format!("  {} ", cwd),
+            Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(40, 40, 55)),
+        ));
+        left_spans
+            .push(Span::styled("", Style::default().fg(Color::Rgb(40, 40, 55)).bg(status_color)));
+
+        let mut status_spans = tui_shimmer::shimmer_spans_with_style_at_phase(
+            &status_text,
+            Style::default()
+                .fg(Color::Rgb(10, 10, 15))
+                .bg(status_color)
+                .add_modifier(Modifier::BOLD),
+            phase,
+        );
+        left_spans.append(&mut status_spans);
+        left_spans.push(Span::styled("", Style::default().fg(status_color)));
+
+        let left_content = Line::from(left_spans);
 
         let ram_str = &state.ram_usage;
         let ignore_count =
@@ -73,7 +82,7 @@ impl Component for HeaderComponent {
                 Style::default().fg(Color::Rgb(40, 40, 55)).bg(Color::Rgb(55, 55, 75)),
             ),
             Span::styled(
-                format!(" {} Ignored ", ignore_count),
+                format!("  {} Files ", ctx.total_files),
                 Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(40, 40, 55)),
             ),
             Span::styled(
@@ -81,13 +90,21 @@ impl Component for HeaderComponent {
                 Style::default().fg(Color::Rgb(55, 55, 75)).bg(Color::Rgb(40, 40, 55)),
             ),
             Span::styled(
+                format!(" {} Ignored ", ignore_count),
+                Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(55, 55, 75)),
+            ),
+            Span::styled(
+                "",
+                Style::default().fg(Color::Rgb(40, 40, 55)).bg(Color::Rgb(55, 55, 75)),
+            ),
+            Span::styled(
                 format!("  {}ms ", state.tick_rate_ms),
                 Style::default()
                     .fg(Palette::PRIMARY)
-                    .bg(Color::Rgb(55, 55, 75))
+                    .bg(Color::Rgb(40, 40, 55))
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("", Style::default().fg(Palette::BORDER_DARK).bg(Color::Rgb(55, 55, 75))),
+            Span::styled("", Style::default().fg(Palette::BORDER_DARK).bg(Color::Rgb(40, 40, 55))),
             Span::styled(
                 " ? Help ",
                 Style::default()

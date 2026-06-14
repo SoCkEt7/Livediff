@@ -118,7 +118,8 @@ async fn main() -> Result<()> {
 
     while let Some(event) = event_rx.recv().await {
         match event {
-            Event::FileChanged(modif) => {
+            Event::FileChanged { modification, total_files } => {
+                domain.total_files = total_files;
                 let selected_path = {
                     let visible_mods: Vec<_> = domain
                         .modifications
@@ -127,7 +128,7 @@ async fn main() -> Result<()> {
                         .collect();
                     visible_mods.get(ui_state.selected_index).map(|m| m.path.clone())
                 };
-                let changed = process_file_change.execute(&mut domain, modif);
+                let changed = process_file_change.execute(&mut domain, modification);
                 if changed {
                     let is_current = if let Some(ref path) = selected_path {
                         if let Some(first_m) = domain.modifications.front() {
@@ -143,7 +144,8 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            Event::FileDeleted(path) => {
+            Event::FileDeleted { path, total_files } => {
+                domain.total_files = total_files;
                 let removed = domain.handle_file_deleted(&path);
                 if removed {
                     ui_state.add_log(format!("File deleted: {}", path));
@@ -160,6 +162,9 @@ async fn main() -> Result<()> {
                     ui_state.reset_diff_scroll_to_first_change(&domain);
                 }
             }
+            Event::TotalFilesUpdated(total_files) => {
+                domain.total_files = total_files;
+            }
             Event::Error(err) => {
                 ui_state.add_log(format!("Error: {}", err));
             }
@@ -170,13 +175,25 @@ async fn main() -> Result<()> {
                 ui_state.anim_frame = ui_state.anim_frame.wrapping_add(1);
                 ui_state.update_ram_usage();
                 ui_state.update_event_history(domain.events_count);
+                ui_state.update_notifications();
             }
-            Event::Mouse(mouse) => match mouse.kind {
-                crossterm::event::MouseEventKind::Down(crossterm::event::MouseButton::Left) => {
-                    let is_popup_visible = ui_state.help_visible
-                        || ui_state.ignore_menu_visible
-                        || ui_state.ignore_input_visible;
-                    if is_popup_visible {
+            Event::Mouse(mouse) => {
+                if ui_state.editor_visible {
+                    if ui_state.editor_save_prompt {
+                        if let crossterm::event::MouseEventKind::Down(
+                            crossterm::event::MouseButton::Left,
+                        ) = mouse.kind
+                        {
+                            let pr = ui_state.save_popup_rect;
+                            let clicked_inside_save = mouse.column >= pr.x
+                                && mouse.column < pr.x + pr.width
+                                && mouse.row >= pr.y
+                                && mouse.row < pr.y + pr.height;
+                            if !clicked_inside_save {
+                                ui_state.hide_save_prompt();
+                            }
+                        }
+                    } else {
                         let pr = ui_state.popup_rect;
                         let clicked_inside = mouse.column >= pr.x
                             && mouse.column < pr.x + pr.width
@@ -184,111 +201,489 @@ async fn main() -> Result<()> {
                             && mouse.row < pr.y + pr.height;
 
                         if !clicked_inside {
-                            ui_state.help_visible = false;
-                            ui_state.ignore_menu_visible = false;
-                            ui_state.ignore_input_visible = false;
-                        } else if ui_state.ignore_menu_visible {
-                            let clicked_row = mouse.row as i32 - (pr.y as i32 + 1);
-                            if clicked_row >= 0
-                                && (clicked_row as usize) < ui_state.ignore_menu_options.len()
+                            if let crossterm::event::MouseEventKind::Down(
+                                crossterm::event::MouseButton::Left,
+                            ) = mouse.kind
                             {
-                                ui_state.ignore_menu_selected = clicked_row as usize;
-                                ui_state.ignore_menu_apply(&mut domain);
+                                if ui_state.editor_has_changes {
+                                    ui_state.show_popup(app::PopupKind::SavePrompt);
+                                } else {
+                                    ui_state.hide_all_popups();
+                                    ui_state.editor_instance = None;
+                                    ui_state.editor_file_path = None;
+                                }
                             }
+                        } else if let Some(ref mut editor) = ui_state.editor_instance {
+                            let block = ratatui::widgets::Block::default()
+                                .borders(ratatui::widgets::Borders::ALL)
+                                .border_type(ratatui::widgets::BorderType::Rounded);
+                            let editor_rect = block.inner(pr);
+                            let _ = editor.mouse(mouse, &editor_rect);
                         }
-                    } else {
-                        let list_rect = ui_state.file_list_rect;
-                        let stats_rect = ui_state.stats_rect;
-                        let footer_rect = ui_state.footer_rect;
+                    }
+                } else {
+                    match mouse.kind {
+                        crossterm::event::MouseEventKind::Down(
+                            crossterm::event::MouseButton::Left,
+                        ) => {
+                            let is_popup_visible = ui_state.overlay_state.is_open();
 
-                        if mouse.column >= list_rect.x
-                            && mouse.column < list_rect.x + list_rect.width
-                            && mouse.row > list_rect.y
-                            && mouse.row < list_rect.y + list_rect.height
-                        {
-                            let clicked_row = mouse.row - (list_rect.y + 1);
-                            let visible_count = domain
-                                .modifications
-                                .iter()
-                                .filter(|m| !domain.is_ignored(&m.path))
-                                .count();
-                            if (clicked_row as usize) < visible_count {
-                                ui_state.selected_index = clicked_row as usize;
-                                ui_state.reset_diff_scroll_to_first_change(&domain);
-                            }
-                        } else if mouse.row >= stats_rect.y
-                            && mouse.row < stats_rect.y + stats_rect.height
-                        {
-                            let rel_x = mouse.column as i32 - stats_rect.x as i32;
-                            if (0..18).contains(&rel_x) {
-                                ui_state.selected_index = 0;
-                                ui_state.reset_diff_scroll_to_first_change(&domain);
-                            } else if (54..72).contains(&rel_x) {
-                                ui_state.clear_all(&mut domain);
-                            }
-                        } else if mouse.row == footer_rect.y {
-                            let x = mouse.column;
-                            if (47..=54).contains(&x) {
-                                ui_state.toggle_ignore_menu(&domain);
-                            } else if (55..=62).contains(&x) {
-                                ui_state.clear_all(&mut domain);
-                            } else if (63..=72).contains(&x) {
-                                let current =
-                                    tick_rate_ms.load(std::sync::atomic::Ordering::Relaxed);
-                                let new_rate = if current <= 50 { 500 } else { current - 50 };
-                                tick_rate_ms.store(new_rate, std::sync::atomic::Ordering::Relaxed);
-                                ui_state.tick_rate_ms = new_rate;
-                                ui_state
-                                    .add_log(format!("Speed cycled (tick rate: {}ms)", new_rate));
-                            } else if (73..=80).contains(&x) {
-                                ui_state.help_visible = true;
-                            } else if (81..=88).contains(&x) {
-                                ui_state.should_quit = true;
+                            if is_popup_visible {
+                                let pr = ui_state.popup_rect;
+                                let clicked_inside = mouse.column >= pr.x
+                                    && mouse.column < pr.x + pr.width
+                                    && mouse.row >= pr.y
+                                    && mouse.row < pr.y + pr.height;
+
+                                if !clicked_inside {
+                                    ui_state.hide_all_popups();
+                                } else if ui_state.menu_visible {
+                                    let clicked_row = mouse.row as i32 - (pr.y as i32 + 2);
+                                    if (0..8).contains(&clicked_row) {
+                                        ui_state.menu_selected = clicked_row as usize;
+                                        ui_state.hide_all_popups();
+                                        match ui_state.menu_selected {
+                                            0 => ui_state.show_popup(app::PopupKind::Help),
+                                            1 => ui_state.show_popup(app::PopupKind::Settings),
+                                            2 => ui_state.toggle_ignore_menu(&domain),
+                                            3 => ui_state.toggle_active_ignores(&domain),
+                                            4 => {
+                                                ui_state.show_popup(app::PopupKind::IgnoreInput);
+                                                ui_state.ignore_input_text.clear();
+                                                ui_state.ignore_cursor_idx = 0;
+                                            }
+                                            5 => ui_state.clear_all(&mut domain),
+                                            6 => {} // Close menu (already hidden)
+                                            7 => ui_state.should_quit = true,
+                                            _ => {}
+                                        }
+                                    }
+                                } else if ui_state.ignore_menu_visible {
+                                    let clicked_row = mouse.row as i32 - (pr.y as i32 + 1);
+                                    if clicked_row >= 0
+                                        && (clicked_row as usize)
+                                            < ui_state.ignore_menu_options.len()
+                                    {
+                                        ui_state.ignore_menu_selected = clicked_row as usize;
+                                        ui_state.ignore_menu_apply(&mut domain);
+                                    }
+                                } else if ui_state.active_ignores_visible {
+                                    let clicked_row = mouse.row as i32 - (pr.y as i32 + 1);
+                                    if clicked_row >= 0
+                                        && (clicked_row as usize)
+                                            < ui_state.active_ignores_list.len()
+                                    {
+                                        ui_state.active_ignores_selected = clicked_row as usize;
+                                        ui_state.remove_active_ignore(&domain);
+                                    }
+                                } else if ui_state.settings_visible {
+                                    let clicked_row = mouse.row as i32 - (pr.y as i32 + 1);
+                                    if clicked_row >= 0 && clicked_row < 3 {
+                                        ui_state.settings_selected = clicked_row as usize;
+                                        match ui_state.settings_selected {
+                                            0 => {
+                                                if let Ok(mut engine) = domain.ignore_engine.write()
+                                                {
+                                                    engine.toggle_vcs_respect();
+                                                    ui_state.respect_vcs_ignore =
+                                                        engine.respect_vcs;
+                                                    ui_state.add_notification(
+                                                        format!(
+                                                            "Respect .gitignore: {}",
+                                                            if ui_state.respect_vcs_ignore { "ON" } else { "OFF" }
+                                                        ),
+                                                        app::ToastKind::Info,
+                                                    );
+                                                }
+                                            }
+                                            1 => {
+                                                if let Ok(mut engine) = domain.ignore_engine.write()
+                                                {
+                                                    engine.ignore_vcs_files =
+                                                        !engine.ignore_vcs_files;
+                                                    ui_state.ignore_gitignore_files =
+                                                        engine.ignore_vcs_files;
+                                                    ui_state.add_notification(
+                                                        format!(
+                                                            "Hide .gitignore: {}",
+                                                            if ui_state.ignore_gitignore_files { "ON" } else { "OFF" }
+                                                        ),
+                                                        app::ToastKind::Info,
+                                                    );
+                                                }
+                                            }
+                                            2 => ui_state.hide_all_popups(),
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                            } else {
+                                let list_rect = ui_state.file_list_rect;
+                                let stats_rect = ui_state.stats_rect;
+                                let footer_rect = ui_state.footer_rect;
+
+                                let divider_col = list_rect.x + list_rect.width;
+                                let is_near_divider = mouse.column == divider_col
+                                    || mouse.column == divider_col.saturating_sub(1)
+                                    || mouse.column == divider_col.saturating_add(1);
+
+                                if is_near_divider {
+                                    ui_state.is_dragging_divider = true;
+                                    let main_chunks_width =
+                                        list_rect.width + ui_state.diff_view_rect.width;
+                                    let click_offset = mouse.column.saturating_sub(list_rect.x);
+                                    if main_chunks_width > 0 {
+                                        let pct = (click_offset as f32 / main_chunks_width as f32
+                                            * 100.0)
+                                            as u16;
+                                        ui_state.file_list_width_pct = pct.clamp(15, 85);
+                                    }
+                                } else {
+                                    if mouse.column >= list_rect.x
+                                        && mouse.column < list_rect.x + list_rect.width
+                                        && mouse.row > list_rect.y
+                                        && mouse.row < list_rect.y + list_rect.height
+                                    {
+                                        let clicked_row = mouse.row - (list_rect.y + 1);
+                                        let visible_count = domain
+                                            .modifications
+                                            .iter()
+                                            .filter(|m| !domain.is_ignored(&m.path))
+                                            .count();
+                                        if (clicked_row as usize) < visible_count {
+                                            ui_state.selected_index = clicked_row as usize;
+                                            ui_state.reset_diff_scroll_to_first_change(&domain);
+                                        }
+                                    } else if mouse.row >= stats_rect.y
+                                        && mouse.row < stats_rect.y + stats_rect.height
+                                    {
+                                        let rel_x = mouse.column as i32 - stats_rect.x as i32;
+                                        if (0..18).contains(&rel_x) {
+                                            ui_state.selected_index = 0;
+                                            ui_state.reset_diff_scroll_to_first_change(&domain);
+                                        } else if (18..36).contains(&rel_x) {
+                                            let stats = domain.stats();
+                                            ui_state.add_log(format!(
+                                                "Total additions: +{} lines",
+                                                stats.lines_added
+                                            ));
+                                        } else if (36..54).contains(&rel_x) {
+                                            let stats = domain.stats();
+                                            ui_state.add_log(format!(
+                                                "Total deletions: -{} lines",
+                                                stats.lines_deleted
+                                            ));
+                                        } else if (54..72).contains(&rel_x) {
+                                            ui_state.clear_all(&mut domain);
+                                        } else if rel_x >= 72 {
+                                            let current = tick_rate_ms
+                                                .load(std::sync::atomic::Ordering::Relaxed);
+                                            let new_rate =
+                                                if current <= 50 { 500 } else { current - 50 };
+                                            tick_rate_ms.store(
+                                                new_rate,
+                                                std::sync::atomic::Ordering::Relaxed,
+                                            );
+                                            ui_state.tick_rate_ms = new_rate;
+                                            ui_state.add_log(format!(
+                                                "Speed cycled (tick rate: {}ms)",
+                                                new_rate
+                                            ));
+                                        }
+                                    } else if mouse.column >= ui_state.header_rect.x
+                                        && mouse.column
+                                            < ui_state.header_rect.x + ui_state.header_rect.width
+                                        && mouse.row >= ui_state.header_rect.y
+                                        && mouse.row
+                                            < ui_state.header_rect.y + ui_state.header_rect.height
+                                    {
+                                        let rel_x =
+                                            mouse.column as i32 - ui_state.header_rect.x as i32;
+                                        let from_right = ui_state.header_rect.width as i32 - rel_x;
+                                        if (0..10).contains(&from_right) {
+                                            ui_state.show_popup(app::PopupKind::Menu);
+                                            ui_state.menu_selected = 0;
+                                        } else if (11..25).contains(&from_right) {
+                                            let current = tick_rate_ms
+                                                .load(std::sync::atomic::Ordering::Relaxed);
+                                            let new_rate =
+                                                if current <= 50 { 500 } else { current - 50 };
+                                            tick_rate_ms.store(
+                                                new_rate,
+                                                std::sync::atomic::Ordering::Relaxed,
+                                            );
+                                            ui_state.tick_rate_ms = new_rate;
+                                            ui_state.add_log(format!(
+                                                "Speed cycled (tick rate: {}ms)",
+                                                new_rate
+                                            ));
+                                        } else if (26..38).contains(&from_right) {
+                                            ui_state.toggle_ignore_menu(&domain);
+                                        } else if (39..50).contains(&from_right) {
+                                            ui_state.selected_index = 0;
+                                            ui_state.reset_diff_scroll_to_first_change(&domain);
+                                        }
+                                    } else if mouse.column >= ui_state.logs_rect.x
+                                        && mouse.column
+                                            < ui_state.logs_rect.x + ui_state.logs_rect.width
+                                        && mouse.row >= ui_state.logs_rect.y
+                                        && mouse.row
+                                            < ui_state.logs_rect.y + ui_state.logs_rect.height
+                                    {
+                                        ui_state.logs.clear();
+                                        ui_state.add_log("Logs cleared.".to_string());
+                                    } else if mouse.row == footer_rect.y {
+                                        let x = mouse.column;
+                                        if (47..=54).contains(&x) {
+                                            ui_state.toggle_ignore_menu(&domain);
+                                        } else if (55..=62).contains(&x) {
+                                            ui_state.clear_all(&mut domain);
+                                        } else if (63..=72).contains(&x) {
+                                            let current = tick_rate_ms
+                                                .load(std::sync::atomic::Ordering::Relaxed);
+                                            let new_rate =
+                                                if current <= 50 { 500 } else { current - 50 };
+                                            tick_rate_ms.store(
+                                                new_rate,
+                                                std::sync::atomic::Ordering::Relaxed,
+                                            );
+                                            ui_state.tick_rate_ms = new_rate;
+                                            ui_state.add_log(format!(
+                                                "Speed cycled (tick rate: {}ms)",
+                                                new_rate
+                                            ));
+                                        } else if (73..=80).contains(&x) {
+                                            ui_state.show_popup(app::PopupKind::Menu);
+                                            ui_state.menu_selected = 0;
+                                        } else if (81..=88).contains(&x) {
+                                            ui_state.should_quit = true;
+                                        }
+                                    }
+                                }
                             }
                         }
+                        crossterm::event::MouseEventKind::Drag(
+                            crossterm::event::MouseButton::Left,
+                        ) => {
+                            if ui_state.is_dragging_divider {
+                                let list_rect = ui_state.file_list_rect;
+                                let main_chunks_width =
+                                    list_rect.width + ui_state.diff_view_rect.width;
+                                let click_offset = mouse.column.saturating_sub(list_rect.x);
+                                if main_chunks_width > 0 {
+                                    let pct = (click_offset as f32 / main_chunks_width as f32
+                                        * 100.0)
+                                        as u16;
+                                    ui_state.file_list_width_pct = pct.clamp(15, 85);
+                                }
+                            }
+                        }
+                        crossterm::event::MouseEventKind::Up(
+                            crossterm::event::MouseButton::Left,
+                        ) => {
+                            ui_state.is_dragging_divider = false;
+                        }
+                        crossterm::event::MouseEventKind::ScrollUp => {
+                            let diff_rect = ui_state.diff_view_rect;
+                            if mouse.column >= diff_rect.x
+                                && mouse.column < diff_rect.x + diff_rect.width
+                                && mouse.row >= diff_rect.y
+                                && mouse.row < diff_rect.y + diff_rect.height
+                            {
+                                ui_state.scroll_up();
+                            } else {
+                                ui_state.select_previous(&domain);
+                            }
+                        }
+                        crossterm::event::MouseEventKind::ScrollDown => {
+                            let diff_rect = ui_state.diff_view_rect;
+                            if mouse.column >= diff_rect.x
+                                && mouse.column < diff_rect.x + diff_rect.width
+                                && mouse.row >= diff_rect.y
+                                && mouse.row < diff_rect.y + diff_rect.height
+                            {
+                                ui_state.scroll_down();
+                            } else {
+                                ui_state.select_next(&domain);
+                            }
+                        }
+                        _ => {}
                     }
                 }
-                crossterm::event::MouseEventKind::ScrollUp => {
-                    let diff_rect = ui_state.diff_view_rect;
-                    if mouse.column >= diff_rect.x
-                        && mouse.column < diff_rect.x + diff_rect.width
-                        && mouse.row >= diff_rect.y
-                        && mouse.row < diff_rect.y + diff_rect.height
-                    {
-                        ui_state.scroll_up();
-                    } else {
-                        ui_state.select_previous(&domain);
-                    }
-                }
-                crossterm::event::MouseEventKind::ScrollDown => {
-                    let diff_rect = ui_state.diff_view_rect;
-                    if mouse.column >= diff_rect.x
-                        && mouse.column < diff_rect.x + diff_rect.width
-                        && mouse.row >= diff_rect.y
-                        && mouse.row < diff_rect.y + diff_rect.height
-                    {
-                        ui_state.scroll_down();
-                    } else {
-                        ui_state.select_next(&domain);
-                    }
-                }
-                _ => {}
-            },
+            }
             Event::Key(code, modifiers) => {
-                // Quit conditions: q or Ctrl+C
-                if code == crossterm::event::KeyCode::Char('q')
-                    || (code == crossterm::event::KeyCode::Char('c')
-                        && modifiers.contains(crossterm::event::KeyModifiers::CONTROL))
+                // Quit conditions: Ctrl+C (always)
+                if code == crossterm::event::KeyCode::Char('c')
+                    && modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
                 {
                     ui_state.should_quit = true;
+                } else if ui_state.editor_visible {
+                    if ui_state.editor_save_prompt {
+                        match code {
+                            crossterm::event::KeyCode::Char('y')
+                            | crossterm::event::KeyCode::Char('Y') => {
+                                if let (Some(editor), Some(path)) =
+                                    (&ui_state.editor_instance, &ui_state.editor_file_path)
+                                {
+                                    let path_clone = path.clone();
+                                    let content = editor.code_ref().get_content();
+                                    let full_path = canonical_path.join(&path_clone);
+                                    if let Err(e) = std::fs::write(&full_path, content) {
+                                        ui_state.add_log(format!("Failed to save file: {}", e));
+                                        ui_state.add_notification(
+                                            format!("Save failed: {}", e),
+                                            app::ToastKind::Error,
+                                        );
+                                    } else {
+                                        ui_state.add_log(format!("Saved {}", path_clone));
+                                        ui_state.add_notification(
+                                            format!("Saved {}", path_clone),
+                                            app::ToastKind::Success,
+                                        );
+                                        ui_state.editor_has_changes = false;
+                                    }
+                                }
+                                ui_state.hide_all_popups();
+                                ui_state.hide_save_prompt();
+                                ui_state.editor_instance = None;
+                                ui_state.editor_file_path = None;
+                            }
+                            crossterm::event::KeyCode::Char('n')
+                            | crossterm::event::KeyCode::Char('N') => {
+                                ui_state.hide_all_popups();
+                                ui_state.hide_save_prompt();
+                                ui_state.editor_instance = None;
+                                ui_state.editor_file_path = None;
+                            }
+                            crossterm::event::KeyCode::Char('c')
+                            | crossterm::event::KeyCode::Char('C')
+                            | crossterm::event::KeyCode::Esc => {
+                                ui_state.hide_save_prompt();
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        match code {
+                            crossterm::event::KeyCode::Esc => {
+                                if ui_state.editor_has_changes {
+                                    ui_state.show_popup(app::PopupKind::SavePrompt);
+                                } else {
+                                    ui_state.hide_all_popups();
+                                    ui_state.editor_instance = None;
+                                    ui_state.editor_file_path = None;
+                                }
+                            }
+                            crossterm::event::KeyCode::Char('s')
+                                if modifiers.contains(crossterm::event::KeyModifiers::CONTROL) =>
+                            {
+                                if let (Some(editor), Some(path)) =
+                                    (&ui_state.editor_instance, &ui_state.editor_file_path)
+                                {
+                                    let path_clone = path.clone();
+                                    let content = editor.code_ref().get_content();
+                                    let full_path = canonical_path.join(&path_clone);
+                                    if let Err(e) = std::fs::write(&full_path, content) {
+                                        ui_state.add_log(format!("Failed to save file: {}", e));
+                                        ui_state.add_notification(
+                                            format!("Save failed: {}", e),
+                                            app::ToastKind::Error,
+                                        );
+                                    } else {
+                                        ui_state.add_log(format!("Saved {}", path_clone));
+                                        ui_state.add_notification(
+                                            format!("Saved {}", path_clone),
+                                            app::ToastKind::Success,
+                                        );
+                                        ui_state.editor_has_changes = false;
+                                    }
+                                }
+                            }
+                            _ => {
+                                if let Some(ref mut editor) = ui_state.editor_instance {
+                                    let block = ratatui::widgets::Block::default()
+                                        .borders(ratatui::widgets::Borders::ALL)
+                                        .border_type(ratatui::widgets::BorderType::Rounded);
+                                    let editor_rect = block.inner(ui_state.popup_rect);
+
+                                    let key_event =
+                                        crossterm::event::KeyEvent::new(code, modifiers);
+                                    if let Err(e) = editor.input(key_event, &editor_rect) {
+                                        ui_state.add_log(format!("Editor error: {}", e));
+                                    } else {
+                                        if let Some(ref path) = ui_state.editor_file_path {
+                                            let full_path = canonical_path.join(path);
+                                            if let Ok(orig) = std::fs::read_to_string(full_path) {
+                                                let current = editor.code_ref().get_content();
+                                                ui_state.editor_has_changes = current != orig;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if code == crossterm::event::KeyCode::Esc {
+                    if ui_state.overlay_state.is_open() {
+                        ui_state.hide_all_popups();
+                    } else {
+                        ui_state.show_popup(app::PopupKind::Menu);
+                        ui_state.menu_selected = 0;
+                    }
+                } else if code == crossterm::event::KeyCode::Char('q') {
+                    if ui_state.overlay_state.is_open() {
+                        if ui_state.ignore_input_visible {
+                            ui_state.ignore_input_char('q');
+                        } else {
+                            ui_state.hide_all_popups();
+                        }
+                    } else {
+                        ui_state.should_quit = true;
+                    }
+                } else if ui_state.menu_visible {
+                    match code {
+                        crossterm::event::KeyCode::Up | crossterm::event::KeyCode::Char('k') => {
+                            if ui_state.menu_selected > 0 {
+                                ui_state.menu_selected -= 1;
+                            } else {
+                                ui_state.menu_selected = 7;
+                            }
+                        }
+                        crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
+                            if ui_state.menu_selected < 7 {
+                                ui_state.menu_selected += 1;
+                            } else {
+                                ui_state.menu_selected = 0;
+                            }
+                        }
+                        crossterm::event::KeyCode::Enter => {
+                            ui_state.hide_all_popups();
+                            match ui_state.menu_selected {
+                                0 => ui_state.show_popup(app::PopupKind::Help),
+                                1 => ui_state.show_popup(app::PopupKind::Settings),
+                                2 => ui_state.toggle_ignore_menu(&domain),
+                                3 => ui_state.toggle_active_ignores(&domain),
+                                4 => {
+                                    ui_state.show_popup(app::PopupKind::IgnoreInput);
+                                    ui_state.ignore_input_text.clear();
+                                    ui_state.ignore_cursor_idx = 0;
+                                }
+                                5 => ui_state.clear_all(&mut domain),
+                                6 => {} // Close Menu (already hidden)
+                                7 => ui_state.should_quit = true,
+                                _ => {}
+                            }
+                        }
+                        crossterm::event::KeyCode::Char('m') => {
+                            ui_state.hide_all_popups();
+                        }
+                        _ => {}
+                    }
                 } else if ui_state.ignore_input_visible {
                     match code {
                         crossterm::event::KeyCode::Enter => {
                             ui_state.ignore_input_apply(&mut domain);
                         }
-                        crossterm::event::KeyCode::Esc => {
-                            ui_state.ignore_input_visible = false;
-                        }
+
                         crossterm::event::KeyCode::Backspace => {
                             ui_state.ignore_input_backspace();
                         }
@@ -314,16 +709,75 @@ async fn main() -> Result<()> {
                         crossterm::event::KeyCode::Enter => {
                             ui_state.ignore_menu_apply(&mut domain);
                         }
-                        crossterm::event::KeyCode::Esc => {
-                            ui_state.ignore_menu_visible = false;
+                        _ => {}
+                    }
+                } else if ui_state.active_ignores_visible {
+                    match code {
+                        crossterm::event::KeyCode::Up | crossterm::event::KeyCode::Char('k') => {
+                            ui_state.active_ignores_up();
+                        }
+                        crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
+                            ui_state.active_ignores_down();
+                        }
+                        crossterm::event::KeyCode::Enter => {
+                            ui_state.remove_active_ignore(&domain);
+                        }
+                        crossterm::event::KeyCode::Char('x') | crossterm::event::KeyCode::Char('X') => {
+                            ui_state.clear_active_ignores(&domain);
                         }
                         _ => {}
                     }
+                } else if ui_state.settings_visible {
+                    match code {
+                        crossterm::event::KeyCode::Up | crossterm::event::KeyCode::Char('k') => {
+                            if ui_state.settings_selected > 0 {
+                                ui_state.settings_selected -= 1;
+                            } else {
+                                ui_state.settings_selected = 2;
+                            }
+                        }
+                        crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
+                            if ui_state.settings_selected < 2 {
+                                ui_state.settings_selected += 1;
+                            } else {
+                                ui_state.settings_selected = 0;
+                            }
+                        }
+                        crossterm::event::KeyCode::Enter => match ui_state.settings_selected {
+                            0 => {
+                                if let Ok(mut engine) = domain.ignore_engine.write() {
+                                    engine.toggle_vcs_respect();
+                                    ui_state.respect_vcs_ignore = engine.respect_vcs;
+                                    ui_state.add_notification(
+                                        format!(
+                                            "Respect .gitignore: {}",
+                                            if ui_state.respect_vcs_ignore { "ON" } else { "OFF" }
+                                        ),
+                                        app::ToastKind::Info,
+                                    );
+                                }
+                            }
+                            1 => {
+                                if let Ok(mut engine) = domain.ignore_engine.write() {
+                                    engine.ignore_vcs_files = !engine.ignore_vcs_files;
+                                    ui_state.ignore_gitignore_files = engine.ignore_vcs_files;
+                                    ui_state.add_notification(
+                                        format!(
+                                            "Hide .gitignore: {}",
+                                            if ui_state.ignore_gitignore_files { "ON" } else { "OFF" }
+                                        ),
+                                        app::ToastKind::Info,
+                                    );
+                                }
+                            }
+                            2 => ui_state.hide_all_popups(),
+                            _ => {}
+                        },
+                        _ => {}
+                    }
                 } else if ui_state.help_visible {
-                    if code == crossterm::event::KeyCode::Char('?')
-                        || code == crossterm::event::KeyCode::Esc
-                    {
-                        ui_state.help_visible = false;
+                    if code == crossterm::event::KeyCode::Char('?') {
+                        ui_state.hide_all_popups();
                     }
                 } else {
                     match code {
@@ -357,6 +811,10 @@ async fn main() -> Result<()> {
                                 engine.ignore_list.clear();
                                 let warnings = engine.load_vcs_ignores(&canonical_path);
                                 ui_state.add_log("Reloaded ignore configuration.".to_string());
+                                ui_state.add_notification(
+                                    "Reloaded ignore cfg".to_string(),
+                                    app::ToastKind::Success,
+                                );
                                 for warning in warnings {
                                     ui_state.add_log(warning);
                                 }
@@ -370,6 +828,10 @@ async fn main() -> Result<()> {
                             ui_state.tick_rate_ms = new_rate;
                             ui_state
                                 .add_log(format!("Speed increased (tick rate: {}ms)", new_rate));
+                            ui_state.add_notification(
+                                format!("Tick rate: {}ms", new_rate),
+                                app::ToastKind::Info,
+                            );
                         }
                         crossterm::event::KeyCode::Char('-')
                         | crossterm::event::KeyCode::Char('_') => {
@@ -379,9 +841,63 @@ async fn main() -> Result<()> {
                             ui_state.tick_rate_ms = new_rate;
                             ui_state
                                 .add_log(format!("Speed decreased (tick rate: {}ms)", new_rate));
+                            ui_state.add_notification(
+                                format!("Tick rate: {}ms", new_rate),
+                                app::ToastKind::Info,
+                            );
                         }
                         crossterm::event::KeyCode::Char('?') => {
-                            ui_state.help_visible = true;
+                            ui_state.show_popup(app::PopupKind::Help);
+                        }
+                        crossterm::event::KeyCode::Char('e') => {
+                            let selected_path = {
+                                let visible_mods: Vec<_> = domain
+                                    .modifications
+                                    .iter()
+                                    .filter(|m| !domain.is_ignored(&m.path))
+                                    .collect();
+                                visible_mods.get(ui_state.selected_index).map(|m| m.path.clone())
+                            };
+                            if let Some(path) = selected_path {
+                                let full_path = canonical_path.join(&path);
+                                match std::fs::read_to_string(&full_path) {
+                                    Ok(content) => {
+                                        let extension = std::path::Path::new(&path)
+                                            .extension()
+                                            .and_then(|ext| ext.to_str())
+                                            .unwrap_or("txt");
+
+                                        match ratatui_code_editor::editor::Editor::new(
+                                            extension,
+                                            &content,
+                                            ratatui_code_editor::theme::vesper(),
+                                        ) {
+                                            Ok(editor) => {
+                                                ui_state.editor_instance = Some(Box::new(editor));
+                                                ui_state.editor_file_path = Some(path.clone());
+                                                ui_state.show_popup(app::PopupKind::Editor);
+                                                ui_state.editor_has_changes = false;
+                                                ui_state.hide_save_prompt();
+                                                ui_state
+                                                    .add_log(format!("Opened {} in editor", path));
+                                            }
+                                            Err(err) => {
+                                                ui_state.add_log(format!(
+                                                    "Failed to start editor: {}",
+                                                    err
+                                                ));
+                                            }
+                                        }
+                                    }
+                                    Err(err) => {
+                                        ui_state.add_log(format!("Failed to read file: {}", err));
+                                    }
+                                }
+                            }
+                        }
+                        crossterm::event::KeyCode::Char('m') => {
+                            ui_state.show_popup(app::PopupKind::Menu);
+                            ui_state.menu_selected = 0;
                         }
                         _ => {}
                     }

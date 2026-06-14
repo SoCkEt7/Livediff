@@ -1,10 +1,18 @@
 # Livediff 👁️
 
+<p align="center">
+  <img src="demo.gif" alt="Livediff Demo" width="800">
+</p>
+
 [![CI](https://github.com/SoCkEt7/Livediff/actions/workflows/ci.yml/badge.svg)](https://github.com/SoCkEt7/Livediff/actions)
 [![Crates.io](https://img.shields.io/crates/v/Livediff.svg)](https://crates.io/crates/Livediff)
 [![License](https://img.shields.io/crates/l/Livediff.svg)](https://github.com/SoCkEt7/Livediff/blob/main/LICENSE)
 
 **Livediff** is a blazing-fast, real-time file monitoring CLI tool built in Rust. It provides a beautiful, interactive Terminal User Interface (TUI) to visualize file diffs as they happen.
+
+### 🌐 Interactive Web Showcase
+
+Try the interactive demo directly in your browser! Visit [socket7.github.io/Livediff](https://socket7.github.io/Livediff/) to experience the Livediff TUI interface with simulated file changes and real-time animations without installing anything.
 
 
 ## ⚡ Quick Start
@@ -60,9 +68,20 @@ You can specify a directory or apply filters using standard arguments:
 # Monitor a specific directory
 livediff ./src
 
-# Ignore specific files
+# Monitor specific files
 livediff ./src --ignore "*.tmp" --ignore "target/"
 ```
+
+### 🖥️ Desktop Integration (Linux)
+
+Livediff comes with a `livediff.desktop` file, allowing you to launch it directly from your application menu or pin it to your taskbar.
+
+1. Copy the desktop file to your local applications folder:
+   ```bash
+   cp livediff.desktop ~/.local/share/applications/
+   ```
+2. (Optional) Copy a custom icon to `~/.local/share/icons/livediff.png`.
+
 
 ## 🤝 Contributing
 

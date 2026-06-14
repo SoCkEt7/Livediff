@@ -37,24 +37,32 @@ impl Component for StatsComponent {
         let deleted_ratio = (stats.lines_deleted as f32 / 500.0).min(1.0);
         let events_ratio = (ctx.events_count as f32 / 100.0).min(1.0);
 
+        let phase = (state.anim_frame as f32 * 0.05) % 1.0;
+
         let items = [
-            ("FILES", format!("{}", stats.modified), get_value_color(files_ratio)),
-            ("ADDED", format!("+{}", stats.lines_added), get_value_color(added_ratio)),
-            ("DELETED", format!("-{}", stats.lines_deleted), get_value_color(deleted_ratio)),
-            ("EVENTS", format!("{}", ctx.events_count), get_value_color(events_ratio)),
+            ("FILES", "  ", format!("{}", stats.modified), get_value_color(files_ratio)),
+            ("ADDED", "  ", format!("+{}", stats.lines_added), get_value_color(added_ratio)),
+            ("DELETED", "  ", format!("-{}", stats.lines_deleted), get_value_color(deleted_ratio)),
+            ("EVENTS", " ⚡ ", format!("{}", ctx.events_count), get_value_color(events_ratio)),
         ];
 
-        for (i, (label, value, color)) in items.iter().enumerate() {
-            let p = Paragraph::new(Line::from(vec![
-                Span::styled(format!(" {} ", label), Style::default().fg(Palette::TEXT_MUTED)),
-                Span::styled(value, Style::default().fg(*color).add_modifier(Modifier::BOLD)),
-            ]))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(ratatui::widgets::BorderType::Rounded)
-                    .border_style(Style::default().fg(Palette::BORDER_DARK)),
-            );
+        for (i, (label, icon, value, color)) in items.iter().enumerate() {
+            let shimmer_style = Style::default()
+                .fg(Palette::TEXT_BRIGHT)
+                .bg(Palette::BG_DARK)
+                .add_modifier(Modifier::BOLD);
+
+            let mut spans = tui_shimmer::shimmer_spans_with_style_at_phase(label, shimmer_style, phase);
+            spans.push(Span::styled(*icon, Style::default().fg(*color)));
+            spans.push(Span::styled(value, Style::default().fg(*color).add_modifier(Modifier::BOLD)));
+
+            let p = Paragraph::new(Line::from(spans))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(ratatui::widgets::BorderType::Rounded)
+                        .border_style(Style::default().fg(Palette::BORDER_DARK)),
+                );
             f.render_widget(p, chunks[i]);
         }
 
@@ -111,19 +119,23 @@ impl Component for StatsComponent {
             sparkline_str.push(char::from_u32(0x2800 + code).unwrap_or(' '));
         }
 
-        let sparkline_paragraph = Paragraph::new(Line::from(vec![
-            Span::styled(" ACTIVITY GRAPH ❱ ", Style::default().fg(Palette::TEXT_MUTED)),
-            Span::styled(
-                sparkline_str,
-                Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
-            ),
-        ]))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(Palette::BORDER_DARK)),
+        let mut sparkline_spans = tui_shimmer::shimmer_spans_with_style_at_phase(
+            " ACTIVITY GRAPH ❱ ",
+            Style::default().fg(Palette::TEXT_MUTED).bg(Palette::BG_DARK),
+            phase,
         );
+        sparkline_spans.push(Span::styled(
+            sparkline_str,
+            Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+        ));
+
+        let sparkline_paragraph = Paragraph::new(Line::from(sparkline_spans))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(ratatui::widgets::BorderType::Rounded)
+                    .border_style(Style::default().fg(Palette::BORDER_DARK)),
+            );
         f.render_widget(sparkline_paragraph, chunks[4]);
     }
 }
