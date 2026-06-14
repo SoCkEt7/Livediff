@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "architecture-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/backend-development/skills/architecture-patterns/SKILL.md",
+      "computedHash": "a66aaa5aa49b75bec12b6270dcde8794b1f0cc75fbb9ecb999e43f8b723b461f"
+    },
+    "find-skills": {
+      "source": "bytedance/deer-flow",
+      "sourceType": "github",
+      "skillPath": "skills/public/find-skills/SKILL.md",
+      "computedHash": "202da6ad9e3c65949fa70371e89b1f55a1f5bd6d11b20b4491af17de495a0caf"
+    },
+    "improve-codebase-architecture": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
+      "computedHash": "ef32aea0a8fab9b365ff9e08a95f8d353e20ca21ea46ec2e73587c86dd341351"
+    },
+    "open-source-checker": {
+      "source": "shipshitdev/library",
+      "sourceType": "github",
+      "skillPath": "skills/open-source-checker/SKILL.md",
+      "computedHash": "80f01e3dd7ffe009ab8fc84b754bb13752d5ff4fa13d41b47b38059d70690692"
+    },
+    "open-source-marketing": {
+      "source": "jonathimer/devmarketing-skills",
+      "sourceType": "github",
+      "skillPath": "skills/open-source-marketing/SKILL.md",
+      "computedHash": "cf6adc86cd71ce585e70f7b8b5866811cd59734829a31fed1c0fb672fb665974"
+    },
+    "open-source-prep": {
+      "source": "iamzhihuix/happy-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/open-source-prep/SKILL.md",
+      "computedHash": "c90294d1c3c5ab6458d1801af71a7c4279f63d54e56e1304d8cf8274119d6c37"
+    }
+  }
+}
