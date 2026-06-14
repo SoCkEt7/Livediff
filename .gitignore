@@ -1,0 +1,27 @@
+node_modules/
+pnpm-lock.yaml
+*.log
+.DS_Store
+dist/
+build/
+.env*
+*.swp
+*.swo
+*~
+
+
+# Added by cargo
+
+/target
+.fastembed_cache/
+
+*.tape
+livediff_demo
+write_examples.sh
+*.gif
+axum.rs
+compiler.rs
+curry.hs
+deployment.yaml
+hooks.tsx
+templates.cpp
