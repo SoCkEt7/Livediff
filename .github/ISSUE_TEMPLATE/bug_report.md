@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve LiveDiff
+about: Create a report to help us improve Livediff
 title: ''
 labels: bug
 assignees: ''
@@ -21,5 +21,5 @@ A clear and concise description of what you expected to happen.
 
 **Environment:**
  - OS: [e.g. Linux, macOS, Windows]
- - Version of LiveDiff: [e.g. 0.1.0]
+ - Version of Livediff: [e.g. 0.1.0]
  - Terminal: [e.g. Alacritty, iTerm2]

@@ -5,7 +5,7 @@ fn main() {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal.draw(|f| {
-        let text = "This is a very long text without spaces: /home/antonin/app/projects/Hydra-ecosystem/CodeLens/src/main.rs";
+        let text = "This is a very long text without spaces: /home/antonin/app/projects/Hydra-ecosystem/Livediff/src/main.rs";
         let p = Paragraph::new(text)
             .block(Block::default().title("TEST").borders(Borders::ALL))
             .wrap(Wrap { trim: false });

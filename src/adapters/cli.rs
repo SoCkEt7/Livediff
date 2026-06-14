@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -16,4 +18,16 @@ pub struct Cli {
     /// Show hidden files
     #[arg(long, default_value_t = false)]
     pub show_hidden: bool,
+
+    /// Do not respect ignore files (.gitignore, .ignore, etc.)
+    #[arg(long, default_value_t = false)]
+    pub no_ignore: bool,
+
+    /// Do not respect ignore files in parent directories
+    #[arg(long, default_value_t = false)]
+    pub no_ignore_parent: bool,
+
+    /// Do not respect git/VCS ignore files (.gitignore, etc.)
+    #[arg(long, default_value_t = false)]
+    pub no_ignore_vcs: bool,
 }

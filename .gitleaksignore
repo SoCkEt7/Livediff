@@ -1,0 +1,3 @@
+# Ignore agent skill documentations containing simulated secrets
+.agents/skills/open-source-prep/references/secrets-patterns.md
+.agents/skills/open-source-checker/references/full-guide.md

@@ -4,7 +4,7 @@ pnpm-lock.yaml
 .DS_Store
 dist/
 build/
-.env
+.env*
 *.swp
 *.swo
 *~
@@ -14,3 +14,9 @@ build/
 
 /target
 .fastembed_cache/
+
+# Agents
+.agents/
+.claude/
+.gemini/
+.omc/

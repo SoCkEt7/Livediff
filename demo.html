@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Livediff 👁️ - Interactive Web Showcase</title>
+    
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            /* Color Tokens - Modern Deep Space */
+            --bg-main: hsl(220, 20%, 5%);
+            --bg-card: hsla(220, 20%, 8%, 0.7);
+            --bg-terminal: hsl(220, 20%, 3%);
+            --border-glow: hsla(250, 85%, 65%, 0.15);
+            --border-color: rgba(255, 255, 255, 0.08);
+            
+            --primary: hsl(250, 85%, 65%);
+            --primary-glow: hsla(250, 85%, 65%, 0.25);
+            --cyan: hsl(190, 95%, 50%);
+            --cyan-glow: hsla(190, 95%, 50%, 0.2);
+            --success: hsl(145, 75%, 45%);
+            --success-glow: hsla(145, 75%, 45%, 0.2);
+            --warning: hsl(35, 80%, 55%);
+            --danger: hsl(355, 80%, 55%);
+            
+            --text-main: hsl(210, 40%, 98%);
+            --text-muted: hsl(215, 15%, 70%);
+            --text-dark: hsl(220, 15%, 45%);
+            
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --radius-sm: 6px;
+            
+            --font-main: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        /* Reset and Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(at 10% 20%, hsla(250, 85%, 60%, 0.05) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, hsla(190, 95%, 50%, 0.05) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Container & Grid layout */
+        .wrapper {
+            width: 100%;
+            max-width: 1400px;
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 24px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--cyan));
+            color: white;
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .logo-text h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Action Buttons */
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-main);
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: transparent;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            background: hsl(250, 85%, 70%);
+            box-shadow: 0 6px 20px hsla(250, 85%, 65%, 0.4);
+        }
+
+        /* Dashboard Showcase Container */
+        .showcase {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 24px;
+        }
+
+        /* Features & Info Pane */
+        .info-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title i {
+            color: var(--cyan);
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .feature-item i {
+            color: var(--success);
+            margin-top: 3px;
+        }
+
+        /* Live controls for simulation */
+        .sim-control {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sim-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sim-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--cyan);
+            transform: translateX(4px);
+        }
+
+        .sim-btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: var(--cyan);
+        }
+
+        .sim-btn-text h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .sim-btn-text p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Terminal Window */
+        .terminal {
+            background: var(--bg-terminal);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 720px;
+            box-shadow: 
+                0 20px 50px rgba(0, 0, 0, 0.6),
+                0 0 40px var(--border-glow);
+            font-family: var(--font-mono);
+            position: relative;
+        }
+
+        /* Terminal Window Header (System Level) */
+        .terminal-header {
+            background: hsl(220, 20%, 6%);
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-close { background: hsl(0, 75%, 55%); }
+        .dot-min { background: hsl(40, 75%, 55%); }
+        .dot-max { background: hsl(120, 75%, 55%); }
+
+        .terminal-title {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .terminal-actions {
+            width: 52px;
+        }
+
+        /* Livediff TUI Inner Layout (The actual TUI screens) */
+        .tui-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 12px;
+            gap: 12px;
+            overflow: hidden;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            color: var(--text-muted);
+        }
+
+        /* TUI Header Component */
+        .tui-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 24px;
+        }
+
+        .tui-header-segments {
+            display: flex;
+            align-items: center;
+        }
+
+        .segment {
+            padding: 2px 10px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            height: 24px;
+        }
+
+        .seg-brand {
+            background: var(--cyan);
+            color: black;
+            border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+        }
+
+        .seg-arrow {
+            width: 0;
+            height: 0;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            border-left: 8px solid;
+            display: inline-block;
+        }
+
+        .seg-arrow-cyan { border-left-color: var(--cyan); }
+        .seg-arrow-dark { border-left-color: hsl(220, 15%, 15%); }
+        .seg-arrow-green { border-left-color: var(--success); }
+
+        .seg-path {
+            background: hsl(220, 15%, 15%);
+            color: white;
+        }
+
+        .seg-status {
+            background: var(--success);
+            color: black;
+            font-weight: 700;
+        }
+
+        .tui-ignored-tag {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+        }
+
+        /* TUI Stats Row */
+        .tui-stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .tui-stat-card {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.01);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            color: var(--text-dark);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .stat-value.cyan { color: var(--cyan); }
+        .stat-value.green { color: var(--success); }
+        .stat-value.red { color: var(--danger); }
+
+        /* TUI Main Split View */
+        .tui-split-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* TUI Left Pane: File List */
+        .tui-pane {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.005);
+        }
+
+        .tui-pane-title {
+            padding: 6px 12px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: var(--cyan);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            letter-spacing: 0.05em;
+        }
+
+        .tui-pane-title.pink {
+            color: hsl(320, 85%, 65%);
+        }
+
+        .tui-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+        }
+
+        .tui-list-item {
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tui-list-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tui-list-item.selected {
+            background: rgba(255, 255, 255, 0.06);
+            color: white;
+            font-weight: 700;
+        }
+
+        .tui-list-item.selected::before {
+            content: '❱';
+            color: var(--cyan);
+            position: absolute;
+            left: 2px;
+            font-size: 0.7rem;
+        }
+
+        .tui-list-item-icon {
+            width: 18px;
+            display: flex;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .icon-rust { color: hsl(15, 80%, 50%); }
+        .icon-config { color: hsl(140, 60%, 40%); }
+        .icon-json { color: hsl(355, 80%, 55%); }
+        .icon-md { color: white; }
+
+        .tui-list-item-type {
+            color: var(--text-dark);
+            width: 32px;
+            font-size: 0.75rem;
+        }
+
+        .tui-list-item-time {
+            color: var(--text-dark);
+            width: 50px;
+            font-size: 0.75rem;
+        }
+
+        .tui-list-item-added { color: var(--success); width: 30px; font-weight: 700; text-align: right; }
+        .tui-list-item-deleted { color: var(--danger); width: 30px; font-weight: 700; text-align: right; }
+        
+        .tui-list-item-path {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-left: 8px;
+        }
+
+        /* TUI Right Pane: Diff View */
+        .tui-diff-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .tui-diff-header-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            border-bottom: 1px dotted rgba(255, 255, 255, 0.05);
+            padding-bottom: 8px;
+        }
+
+        .tui-diff-badge {
+            background: var(--cyan);
+            color: black;
+            padding: 1px 6px;
+            font-weight: 700;
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
+        }
+
+        .tui-diff-badge.rust { background: hsl(15, 80%, 55%); color: white; }
+
+        .diff-line {
+            display: flex;
+            border-radius: var(--radius-sm);
+        }
+
+        .diff-line.addition {
+            background: rgba(145, 230, 180, 0.06);
+            color: var(--success);
+        }
+
+        .diff-line.deletion {
+            background: rgba(230, 145, 145, 0.06);
+            color: var(--danger);
+        }
+
+        .diff-line-number {
+            width: 36px;
+            color: var(--text-dark);
+            text-align: right;
+            padding-right: 12px;
+            user-select: none;
+        }
+
+        .diff-line-sign {
+            width: 14px;
+            font-weight: 700;
+        }
+
+        .diff-line-text {
+            flex: 1;
+        }
+
+        /* Ignore Menu Glass Dialog Box */
+        .ignore-menu-popup {
+            position: absolute;
+            top: 25%;
+            left: 10%;
+            right: 10%;
+            background: hsla(220, 25%, 6%, 0.95);
+            border: 2px double var(--warning);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+        }
+
+        .ignore-menu-title {
+            color: var(--warning);
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 6px;
+        }
+
+        .ignore-menu-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .ignore-menu-option:hover, .ignore-menu-option.selected {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--cyan);
+            font-weight: 700;
+        }
+
+        /* TUI Bottom Pane: Logs */
+        .tui-logs-pane {
+            height: 110px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.005);
+        }
+
+        .tui-logs-list {
+            flex: 1;
+            padding: 8px 12px;
+            overflow-y: auto;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tui-log-item {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tui-log-time {
+            color: var(--warning);
+        }
+
+        /* TUI Footer */
+        .tui-footer-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 20px;
+            font-size: 0.75rem;
+            color: var(--text-dark);
+        }
+
+        .tui-footer-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tui-footer-brand {
+            color: var(--cyan);
+            font-weight: 700;
+        }
+
+        .tui-footer-keys {
+            display: flex;
+            gap: 12px;
+        }
+
+        .tui-key-binding span {
+            color: var(--warning);
+            font-weight: 700;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .showcase {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <header>
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Livediff</h1>
+                    <p>Real-time file monitoring with interactive TUI</p>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="window.location.reload()">
+                    <i class="fa-solid fa-arrows-rotate"></i> Reset Demo
+                </button>
+                <button class="btn btn-primary" onclick="simulateNewFileChange()">
+                    <i class="fa-solid fa-plus"></i> Simulate File Change
+                </button>
+            </div>
+        </header>
+
+        <div class="showcase">
+            <!-- Left Info Panel -->
+            <div class="info-pane">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fa-solid fa-circle-nodes"></i>
+                        <span>Hexagonal Architecture</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span><strong>Domain Isolation:</strong> The core diffing engine is decoupled from file system reads.</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span><strong>Port Adapters:</strong> File actions run inside mock-friendly wrappers for robust unit testing.</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Interactive Controls</span>
+                    </div>
+                    <div class="sim-control">
+                        <button class="sim-btn" onclick="openIgnoreMenuSimulation()">
+                            <div class="sim-btn-icon"><i class="fa-solid fa-ban"></i></div>
+                            <div class="sim-btn-text">
+                                <h4>Ignore Selection</h4>
+                                <p>Simulate 'i' key binding popup</p>
+                            </div>
+                        </button>
+                        <button class="sim-btn" onclick="clearTuiLogs()">
+                            <div class="sim-btn-icon"><i class="fa-solid fa-eraser"></i></div>
+                            <div class="sim-btn-text">
+                                <h4>Clear Activity Logs</h4>
+                                <p>Simulate 'c' key clear action</p>
+                            </div>
+                        </button>
+                        <button class="sim-btn" onclick="simulateToggleHelp()">
+                            <div class="sim-btn-icon"><i class="fa-solid fa-question"></i></div>
+                            <div class="sim-btn-text">
+                                <h4>Toggle Help Menu</h4>
+                                <p>Show TUI shortcuts mapping</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal Showcase Container -->
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dots">
+                        <div class="dot dot-close" onclick="alert('Use Q or Ctrl+C to quit')"></div>
+                        <div class="dot dot-min"></div>
+                        <div class="dot dot-max"></div>
+                    </div>
+                    <div class="terminal-title">
+                        <i class="fa-solid fa-terminal"></i> antonin@livediff:~
+                    </div>
+                    <div class="terminal-actions"></div>
+                </div>
+
+                <div class="tui-container">
+                    <!-- TUI Header Segment -->
+                    <div class="tui-header-bar">
+                        <div class="tui-header-segments">
+                            <span class="segment seg-brand">◈ LIVEDIFF</span>
+                            <span class="seg-arrow seg-arrow-cyan"></span>
+                            <span class="segment seg-path"> livediff</span>
+                            <span class="seg-arrow seg-arrow-dark"></span>
+                            <span class="segment seg-status" id="spinner-status">⠋ LIVE</span>
+                            <span class="seg-arrow seg-arrow-green"></span>
+                        </div>
+                        <div class="tui-ignored-tag" id="ignored-count">0 Ignored</div>
+                    </div>
+
+                    <!-- TUI Stats -->
+                    <div class="tui-stats-row">
+                        <div class="tui-stat-card">
+                            <span class="stat-label">FILES</span>
+                            <span class="stat-value cyan" id="stat-files">3</span>
+                        </div>
+                        <div class="tui-stat-card">
+                            <span class="stat-label">ADDED</span>
+                            <span class="stat-value green" id="stat-added">+120</span>
+                        </div>
+                        <div class="tui-stat-card">
+                            <span class="stat-label">DELETED</span>
+                            <span class="stat-value red" id="stat-deleted">-15</span>
+                        </div>
+                    </div>
+
+                    <!-- TUI Content Area -->
+                    <div class="tui-split-view">
+                        <!-- File List -->
+                        <div class="tui-pane">
+                            <div class="tui-pane-title">RECENT CHANGES</div>
+                            <div class="tui-list" id="file-list">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Diff Viewer -->
+                        <div class="tui-pane" style="position: relative;">
+                            <div class="tui-pane-title pink">DIFF PREVIEW</div>
+                            <div class="tui-diff-content" id="diff-viewer">
+                                <!-- Generated Dynamically -->
+                            </div>
+
+                            <!-- Ignore Menu Dialog (Mock TUI layer) -->
+                            <div class="ignore-menu-popup" id="ignore-dialog">
+                                <div class="ignore-menu-title">IGNORE OPTIONS</div>
+                                <div id="ignore-options-container">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TUI Logs -->
+                    <div class="tui-logs-pane">
+                        <div class="tui-pane-title">ACTIVITY LOG</div>
+                        <div class="tui-logs-list" id="logs-list">
+                            <!-- Generated Dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- TUI Footer -->
+                    <div class="tui-footer-bar">
+                        <div class="tui-footer-left">
+                            <span class="tui-footer-brand">◈ Livediff</span>
+                            <span>v0.1.0</span>
+                            <span style="color: gray; margin-left: 10px;">│ © 2026 Antonin Nivoche</span>
+                        </div>
+                        <div class="tui-footer-keys">
+                            <span class="tui-key-binding"><span>↑↓</span> Sel</span>
+                            <span class="tui-key-binding"><span>PgUp/Dn/←→</span> Scroll</span>
+                            <span class="tui-key-binding"><span>I</span> Ign</span>
+                            <span class="tui-key-binding"><span>C</span> Clr</span>
+                            <span class="tui-key-binding"><span>?</span> Help</span>
+                            <span class="tui-key-binding"><span>Q</span> Quit</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive script to power mockup -->
+    <script>
+        // Mock Data representing file modifications
+        let mockFiles = [
+            {
+                name: "src/domain/mod.rs",
+                type: "RUST",
+                iconClass: "fa-rust icon-rust",
+                time: "1m ago",
+                added: 3,
+                deleted: 0,
+                is_binary: false,
+                size: "61 B",
+                modifiedTime: "14:42:11",
+                diff: [
+                    { type: 'addition', num: 1, text: "pub mod diff_engine;" },
+                    { type: 'addition', num: 2, text: "pub mod ports;" },
+                    { type: 'addition', num: 3, text: "pub mod watcher_session;" }
+                ]
+            },
+            {
+                name: "src/domain/watcher_session.rs",
+                type: "RUST",
+                iconClass: "fa-rust icon-rust",
+                time: "2m ago",
+                added: 61,
+                deleted: 5,
+                is_binary: false,
+                size: "2.4 KB",
+                modifiedTime: "14:41:09",
+                diff: [
+                    { type: 'normal', num: 28, text: "impl<F: FileSystemPort> WatcherSession<F> {" },
+                    { type: 'addition', num: 29, text: "    pub async fn new(fs: F, root: PathBuf, max_size: u64) -> Self {" },
+                    { type: 'addition', num: 30, text: "        Self {" },
+                    { type: 'addition', num: 31, text: "            fs_adapter: fs," },
+                    { type: 'addition', num: 32, text: "            root_path: root," },
+                    { type: 'addition', num: 33, text: "            max_size," },
+                    { type: 'addition', num: 34, text: "            file_cache: HashMap::new()," },
+                    { type: 'addition', num: 35, text: "        }" },
+                    { type: 'addition', num: 36, text: "    }" },
+                    { type: 'deletion', num: 37, text: "    // old implementation code removed" },
+                    { type: 'normal', num: 38, text: "}" }
+                ]
+            },
+            {
+                name: "Cargo.toml",
+                type: "TOML",
+                iconClass: "fa-gears icon-config",
+                time: "5m ago",
+                added: 56,
+                deleted: 10,
+                is_binary: false,
+                size: "1.4 KB",
+                modifiedTime: "14:38:54",
+                diff: [
+                    { type: 'normal', num: 43, text: "tempfile = \"3.15\"" },
+                    { type: 'addition', num: 44, text: "[lints.rust]" },
+                    { type: 'addition', num: 45, text: "future-incompatible = \"warn\"" },
+                    { type: 'addition', num: 46, text: "nonstandard_style = { level = \"deny\", priority = -1 }" },
+                    { type: 'addition', num: 47, text: "rust_2018_idioms = { level = \"deny\", priority = -1 }" },
+                    { type: 'addition', num: 48, text: "" },
+                    { type: 'addition', num: 49, text: "[lints.clippy]" },
+                    { type: 'addition', num: 50, text: "all = { level = \"deny\", priority = 1 }" },
+                    { type: 'addition', num: 51, text: "redundant_clone = { level = \"deny\", priority = 2 }" }
+                ]
+            }
+        ];
+
+        let selectedIndex = 0;
+        let ignoredPatterns = new Set();
+        let logs = [
+            "Watcher ready - monitoring /home/antonin/livediff...",
+            "Performing initial scan...",
+            "Initial scan complete."
+        ];
+
+        // Spinner animation frames
+        const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        let spinnerIdx = 0;
+
+        function animateSpinner() {
+            spinnerIdx = (spinnerIdx + 1) % spinnerFrames.length;
+            const statusEl = document.getElementById("spinner-status");
+            if (statusEl) {
+                statusEl.textContent = `${spinnerFrames[spinnerIdx]} LIVE`;
+            }
+        }
+        setInterval(animateSpinner, 100);
+
+        function matchesIgnore(filename) {
+            for (let pattern of ignoredPatterns) {
+                if (pattern.startsWith("*.")) {
+                    const ext = pattern.slice(1); // e.g. .rs
+                    if (filename.endsWith(ext)) return true;
+                }
+                if (filename.includes(pattern)) return true;
+            }
+            return false;
+        }
+
+        function getVisibleFiles() {
+            return mockFiles.filter(f => !matchesIgnore(f.name));
+        }
+
+        function updateUI() {
+            const visibleFiles = getVisibleFiles();
+            
+            // Render Stats
+            let totalFiles = visibleFiles.length;
+            let totalAdded = visibleFiles.reduce((acc, f) => acc + f.added, 0);
+            let totalDeleted = visibleFiles.reduce((acc, f) => acc + f.deleted, 0);
+            
+            document.getElementById("stat-files").textContent = totalFiles;
+            document.getElementById("stat-added").textContent = `+${totalAdded}`;
+            document.getElementById("stat-deleted").textContent = `-${totalDeleted}`;
+            document.getElementById("ignored-count").textContent = `${ignoredPatterns.size} Ignored`;
+
+            // Adjust selection index if index is out of bounds
+            if (selectedIndex >= visibleFiles.length && visibleFiles.length > 0) {
+                selectedIndex = visibleFiles.length - 1;
+            }
+
+            // Render File List
+            const fileListEl = document.getElementById("file-list");
+            fileListEl.innerHTML = "";
+            
+            if (visibleFiles.length === 0) {
+                fileListEl.innerHTML = `<div style="padding: 10px; color: gray; text-align: center;">No active changes</div>`;
+            } else {
+                visibleFiles.forEach((file, index) => {
+                    const item = document.createElement("div");
+                    item.className = `tui-list-item ${index === selectedIndex ? 'selected' : ''}`;
+                    item.onclick = () => selectFile(index);
+                    
+                    item.innerHTML = `
+                        <div class="tui-list-item-icon"><i class="fa-brands ${file.iconClass}"></i></div>
+                        <div class="tui-list-item-type">${file.type}</div>
+                        <div class="tui-list-item-time">${file.time}</div>
+                        <div class="tui-list-item-added">+${file.added}</div>
+                        <div class="tui-list-item-deleted">-${file.deleted}</div>
+                        <div class="tui-list-item-path">${file.name}</div>
+                    `;
+                    fileListEl.appendChild(item);
+                });
+            }
+
+            // Render Diff Content
+            const diffViewerEl = document.getElementById("diff-viewer");
+            diffViewerEl.innerHTML = "";
+            
+            const activeFile = visibleFiles[selectedIndex];
+            if (activeFile) {
+                // Header line inside TUI diff view
+                const headerLine = document.createElement("div");
+                headerLine.className = "tui-diff-header-line";
+                headerLine.innerHTML = `
+                    <span class="tui-diff-badge rust">${activeFile.type}</span>
+                    <strong>${activeFile.name}</strong>
+                    <span style="color: gray; margin-left: 10px;">SIZE: ${activeFile.size}</span>
+                `;
+                diffViewerEl.appendChild(headerLine);
+
+                // Add code lines
+                activeFile.diff.forEach(line => {
+                    const lineEl = document.createElement("div");
+                    lineEl.className = `diff-line ${line.type}`;
+                    
+                    let sign = " ";
+                    if (line.type === 'addition') sign = "+";
+                    if (line.type === 'deletion') sign = "-";
+
+                    lineEl.innerHTML = `
+                        <div class="diff-line-number">${line.num}</div>
+                        <div class="diff-line-sign">${sign}</div>
+                        <div class="diff-line-text">${escapeHtml(line.text)}</div>
+                    `;
+                    diffViewerEl.appendChild(lineEl);
+                });
+            } else {
+                diffViewerEl.innerHTML = `<div style="padding: 20px; color: gray; text-align: center;">No file selected</div>`;
+            }
+
+            // Render Logs
+            const logsListEl = document.getElementById("logs-list");
+            logsListEl.innerHTML = "";
+            logs.slice(-4).forEach(log => {
+                const logEl = document.createElement("div");
+                logEl.className = "tui-log-item";
+                logEl.innerHTML = `<span class="tui-log-time">[${getCurrentTime()}]</span> <span>${log}</span>`;
+                logsListEl.appendChild(logEl);
+            });
+            logsListEl.scrollTop = logsListEl.scrollHeight;
+        }
+
+        function selectFile(index) {
+            selectedIndex = index;
+            updateUI();
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toTimeString().split(' ')[0];
+        }
+
+        // Action Simulation Functions
+        function simulateNewFileChange() {
+            const pathName = `src/adapters/mock_adapter_${Math.floor(Math.random() * 100)}.rs`;
+            const randomAdd = Math.floor(Math.random() * 20) + 1;
+            
+            const newFile = {
+                name: pathName,
+                type: "RUST",
+                iconClass: "fa-rust icon-rust",
+                time: "now",
+                added: randomAdd,
+                deleted: 0,
+                is_binary: false,
+                size: "520 B",
+                modifiedTime: getCurrentTime(),
+                diff: [
+                    { type: 'addition', num: 1, text: "use std::io::Result;" },
+                    { type: 'addition', num: 2, text: "pub struct MockFileSystemAdapter;" },
+                    { type: 'addition', num: 3, text: "" },
+                    { type: 'addition', num: 4, text: "impl MockFileSystemAdapter {" },
+                    { type: 'addition', num: 5, text: `    pub fn test() -> usize { ${randomAdd} }` },
+                    { type: 'addition', num: 6, text: "}" }
+                ]
+            };
+
+            mockFiles.unshift(newFile);
+            logs.push(`File changed: ${pathName}`);
+            selectedIndex = 0;
+            updateUI();
+        }
+
+        function simulateToggleHelp() {
+            logs.push("Help menu shortcuts displayed.");
+            alert("Livediff TUI Shortcuts:\n\n↑ / ↓ : Select file\nPgUp / PgDn : Scroll diff view\ni : Open runtime ignore list\nc : Clear activity log\nq / Ctrl+C : Quit application");
+            updateUI();
+        }
+
+        function clearTuiLogs() {
+            logs = ["Activity log cleared."];
+            updateUI();
+        }
+
+        // Ignore Menu simulation logic
+        function openIgnoreMenuSimulation() {
+            const visibleFiles = getVisibleFiles();
+            const activeFile = visibleFiles[selectedIndex];
+            if (!activeFile) {
+                alert("No active file selected to ignore!");
+                return;
+            }
+
+            const dialog = document.getElementById("ignore-dialog");
+            const container = document.getElementById("ignore-options-container");
+            
+            // Build options based on file path
+            const options = [];
+            options.push({ label: `Ignore exact file: ${activeFile.name}`, pattern: activeFile.name });
+            
+            // Extract extension
+            const extIdx = activeFile.name.lastIndexOf('.');
+            if (extIdx > 0) {
+                const ext = activeFile.name.slice(extIdx);
+                options.push({ label: `Ignore extension: *${ext}`, pattern: `*${ext}` });
+            }
+
+            // Extract directory path
+            const pathParts = activeFile.name.split('/');
+            if (pathParts.length > 1) {
+                const dir = pathParts[0];
+                options.push({ label: `Ignore directory: ${dir}/`, pattern: dir });
+            }
+
+            container.innerHTML = "";
+            options.forEach((opt, idx) => {
+                const optEl = document.createElement("div");
+                optEl.className = "ignore-menu-option";
+                optEl.innerHTML = `<span>❱</span> <span>${opt.label}</span>`;
+                optEl.onclick = () => {
+                    applyIgnorePattern(opt.pattern);
+                    dialog.style.display = "none";
+                };
+                container.appendChild(optEl);
+            });
+
+            // Toggle Visibility
+            dialog.style.display = dialog.style.display === "block" ? "none" : "block";
+            logs.push("Ignore menu simulation opened.");
+            updateUI();
+        }
+
+        function applyIgnorePattern(pattern) {
+            ignoredPatterns.add(pattern);
+            logs.push(`Applied ignore pattern: ${pattern}`);
+            updateUI();
+        }
+
+        // Initial render
+        updateUI();
+    </script>
+</body>
+</html>
