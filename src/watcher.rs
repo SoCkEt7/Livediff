@@ -34,19 +34,23 @@ pub async fn run_watcher(tx: mpsc::Sender<Event>, config: WatcherConfig) -> anyh
     watcher.watch(&root_path, RecursiveMode::Recursive)?;
     let _ = tx.send(Event::Log(format!("Watcher ready - monitoring {}...", root_path.display()))).await;
 
-    // Load .gitignore
+    // Load ignore files
     let gitignore = if !config.no_ignore && !config.all {
         let mut ignore_builder = GitignoreBuilder::new(&root_path);
+        let ignore_names = [".gitignore", ".ignore", ".rgignore"];
         
-        // Search upwards for .gitignore files (standard git behavior)
+        // Search upwards for ignore files (standard git behavior)
         let mut found_git = false;
         for ancestor in root_path.ancestors() {
-            let gitignore_path = ancestor.join(".gitignore");
-            if gitignore_path.exists() {
-                if let Some(err) = ignore_builder.add(&gitignore_path) {
-                    let _ = tx.send(Event::Log(format!("Warning: Failed to load {}: {}", gitignore_path.display(), err))).await;
+            for ignore_name in &ignore_names {
+                let ignore_path = ancestor.join(ignore_name);
+                if ignore_path.exists() {
+                    if let Some(err) = ignore_builder.add(&ignore_path) {
+                        let _ = tx.send(Event::Log(format!("Warning: Failed to load {}: {}", ignore_path.display(), err))).await;
+                    }
                 }
             }
+            
             // Stop at .git directory or if we reached root
             if ancestor.join(".git").is_dir() {
                 found_git = true;
@@ -54,12 +58,14 @@ pub async fn run_watcher(tx: mpsc::Sender<Event>, config: WatcherConfig) -> anyh
             }
         }
         
-        // If not in a git repo, we only use the local .gitignore to avoid over-reaching parent ignores
+        // If not in a git repo, we only use the local ignore files to avoid over-reaching parent ignores
         if !found_git {
             let mut local_ignore_builder = GitignoreBuilder::new(&root_path);
-            let local_gitignore_path = root_path.join(".gitignore");
-            if local_gitignore_path.exists() {
-                let _ = local_ignore_builder.add(&local_gitignore_path);
+            for ignore_name in &ignore_names {
+                let local_ignore_path = root_path.join(ignore_name);
+                if local_ignore_path.exists() {
+                    let _ = local_ignore_builder.add(&local_ignore_path);
+                }
             }
             local_ignore_builder.build().unwrap_or_else(|_| GitignoreBuilder::new(&root_path).build().unwrap())
         } else {

@@ -13,7 +13,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Title
+            Constraint::Length(1), // Title
             Constraint::Length(3), // Stats
             Constraint::Min(10),   // Main content
             Constraint::Length(5), // Logs
@@ -35,7 +35,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_logs(f, app, chunks[3]);
     draw_footer(f, chunks[4]);
 
-    if app.help_visible {
+    if app.ignore_input_visible {
+        draw_ignore_input(f, app);
+    } else if app.ignore_menu_visible {
+        draw_ignore_menu(f, app);
+    } else if app.help_visible {
         draw_help(f);
     }
 }
@@ -71,31 +75,39 @@ fn draw_title(f: &mut Frame, app: &App, area: Rect) {
     let anim_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let spinner = anim_chars[app.anim_frame % anim_chars.len()];
     
-    let status_style = if app.modifications.is_empty() {
-        Style::default().fg(Color::Yellow)
+    let (status_text, status_color) = if app.modifications.is_empty() {
+        (format!(" {} STANDBY ", spinner), Color::Yellow)
     } else {
-        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+        (format!(" {} LIVE ", spinner), Color::Green)
     };
 
-    let status_text = if app.modifications.is_empty() {
-        format!("{}  WAITING FOR CHANGES", spinner)
-    } else {
-        format!("{}  MONITORING ACTIVE", spinner)
-    };
+    let cwd = std::env::current_dir()
+        .map(|p| p.file_name().unwrap_or_default().to_string_lossy().into_owned())
+        .unwrap_or_else(|_| "Unknown".to_string());
 
-    let title_content = Line::from(vec![
-        Span::styled(" ◈ CODELENS ", Style::default().add_modifier(Modifier::BOLD).fg(Color::Cyan).bg(Color::Rgb(20, 20, 40))),
-        Span::raw(" │ "),
-        Span::styled(status_text, status_style),
+    let left_content = Line::from(vec![
+        Span::styled(" ◈ CODELENS ", Style::default().add_modifier(Modifier::BOLD).fg(Color::Black).bg(Color::Cyan)),
+        Span::styled("", Style::default().fg(Color::Cyan).bg(Color::Rgb(40, 40, 60))),
+        Span::styled(format!("  {} ", cwd), Style::default().fg(Color::White).bg(Color::Rgb(40, 40, 60))),
+        Span::styled("", Style::default().fg(Color::Rgb(40, 40, 60)).bg(status_color)),
+        Span::styled(status_text, Style::default().fg(Color::Black).bg(status_color).add_modifier(Modifier::BOLD)),
+        Span::styled("", Style::default().fg(status_color)),
     ]);
 
-    let title = Paragraph::new(title_content)
-        .block(Block::default()
-            .borders(Borders::BOTTOM)
-            .border_style(Style::default().fg(Color::Rgb(60, 60, 100))))
-        .alignment(ratatui::layout::Alignment::Left);
+    let right_content = Line::from(vec![
+        Span::styled("", Style::default().fg(Color::Rgb(40, 40, 60))),
+        Span::styled(format!(" {} Ignored ", app.ignore_list.len()), Style::default().fg(Color::White).bg(Color::Rgb(40, 40, 60))),
+        Span::styled("", Style::default().fg(Color::DarkGray).bg(Color::Rgb(40, 40, 60))),
+        Span::styled(" ? Help ", Style::default().fg(Color::Black).bg(Color::DarkGray).add_modifier(Modifier::BOLD)),
+    ]);
 
-    f.render_widget(title, area);
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+        .split(area);
+
+    f.render_widget(Paragraph::new(left_content).alignment(ratatui::layout::Alignment::Left), chunks[0]);
+    f.render_widget(Paragraph::new(right_content).alignment(ratatui::layout::Alignment::Right), chunks[1]);
 }
 
 fn draw_stats(f: &mut Frame, app: &App, area: Rect) {
@@ -132,7 +144,7 @@ fn draw_stats(f: &mut Frame, app: &App, area: Rect) {
 
 fn draw_file_list(f: &mut Frame, app: &mut App, area: Rect) {
     let now = std::time::SystemTime::now();
-    let items: Vec<ListItem> = app.modifications.iter().filter(|m| !app.ignore_list.contains(&m.path)).map(|m| {
+    let items: Vec<ListItem> = app.modifications.iter().filter(|m| !app.is_ignored(&m.path)).map(|m| {
         let elapsed = now.duration_since(m.timestamp).unwrap_or(std::time::Duration::from_secs(0));
         let time_str = if elapsed.as_secs() < 60 {
             format!("{}s ago", elapsed.as_secs())
@@ -181,7 +193,7 @@ fn draw_file_list(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn draw_diff_view(f: &mut Frame, app: &App, area: Rect) {
-    let visible_mods: Vec<_> = app.modifications.iter().filter(|m| !app.ignore_list.contains(&m.path)).collect();
+    let visible_mods: Vec<_> = app.modifications.iter().filter(|m| !app.is_ignored(&m.path)).collect();
     
     let mut text = Text::default();
     
@@ -255,8 +267,7 @@ fn draw_diff_view(f: &mut Frame, app: &App, area: Rect) {
             .borders(Borders::ALL)
             .border_type(ratatui::widgets::BorderType::Rounded)
             .border_style(Style::default().fg(Color::Rgb(60, 60, 100))))
-        .scroll((app.diff_scroll, 0))
-        .wrap(Wrap { trim: false });
+        .scroll(app.diff_scroll);
     
     f.render_widget(p, area);
 }
@@ -281,7 +292,7 @@ fn draw_footer(f: &mut Frame, area: Rect) {
         Span::raw("│ "),
         Span::styled("↑↓", Style::default().fg(Color::Yellow)),
         Span::raw(" Sel │ "),
-        Span::styled("PgUp/Dn", Style::default().fg(Color::Yellow)),
+        Span::styled("PgUp/Dn/←→", Style::default().fg(Color::Yellow)),
         Span::raw(" Scrl │ "),
         Span::styled("I", Style::default().fg(Color::Yellow)),
         Span::raw(" Ign │ "),
@@ -294,7 +305,9 @@ fn draw_footer(f: &mut Frame, area: Rect) {
         Span::raw("© 2026 "),
         Span::styled("Antonin Nivoche", Style::default().fg(Color::Cyan)),
         Span::raw(" | "),
-        Span::styled("olive.click", Style::default().fg(Color::Blue)),
+        Span::styled("https://github.com/SoCkEt7", Style::default().fg(Color::Green).add_modifier(Modifier::UNDERLINED)),
+        Span::raw(" | "),
+        Span::styled("https://olive.click", Style::default().fg(Color::Blue).add_modifier(Modifier::UNDERLINED)),
     ]))
     .alignment(ratatui::layout::Alignment::Left)
     .style(Style::default().fg(Color::DarkGray));
@@ -308,8 +321,9 @@ fn draw_help(f: &mut Frame) {
         Line::from(""),
         Line::from(vec![Span::styled("  ↑ / k      ", Style::default().fg(Color::Yellow)), Span::raw("- Select previous file")]),
         Line::from(vec![Span::styled("  ↓ / j      ", Style::default().fg(Color::Yellow)), Span::raw("- Select next file")]),
-        Line::from(vec![Span::styled("  PgUp / PgDn", Style::default().fg(Color::Yellow)), Span::raw("- Scroll diff preview")]),
-        Line::from(vec![Span::styled("  i          ", Style::default().fg(Color::Yellow)), Span::raw("- Ignore selected file")]),
+        Line::from(vec![Span::styled("  PgUp / PgDn", Style::default().fg(Color::Yellow)), Span::raw("- Scroll diff vertically")]),
+        Line::from(vec![Span::styled("  ← / → / h/l", Style::default().fg(Color::Yellow)), Span::raw("- Scroll diff horizontally")]),
+        Line::from(vec![Span::styled("  i          ", Style::default().fg(Color::Yellow)), Span::raw("- Ignore menu (file/dir/ext)")]),
         Line::from(vec![Span::styled("  c          ", Style::default().fg(Color::Yellow)), Span::raw("- Clear history")]),
         Line::from(vec![Span::styled("  ?          ", Style::default().fg(Color::Yellow)), Span::raw("- Toggle this menu")]),
         Line::from(vec![Span::styled("  q / Ctrl+C ", Style::default().fg(Color::Yellow)), Span::raw("- Quit")]),
@@ -352,4 +366,58 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+fn draw_ignore_menu(f: &mut Frame, app: &App) {
+    let area = centered_rect(40, 40, f.area());
+    
+    let mut items = vec![];
+    for (i, opt) in app.ignore_menu_options.iter().enumerate() {
+        let prefix = if i == app.ignore_menu_selected { " ❱ " } else { "   " };
+        let style = if i == app.ignore_menu_selected {
+            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled(prefix, style),
+            Span::styled(opt, style),
+        ])));
+    }
+
+    let list = List::new(items)
+        .block(Block::default()
+            .title(Span::styled(" IGNORE OPTIONS ", Style::default().add_modifier(Modifier::BOLD).fg(Color::Yellow)))
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Double)
+            .border_style(Style::default().fg(Color::Yellow)))
+        .style(Style::default().fg(Color::White).bg(Color::Rgb(10, 10, 30)));
+    
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(list, area);
+}
+
+fn draw_ignore_input(f: &mut Frame, app: &App) {
+    let area = centered_rect(50, 20, f.area());
+    
+    let content = vec![
+        Line::from(vec![Span::styled(" Type a glob pattern (e.g. *.log, tests/): ", Style::default().fg(Color::DarkGray))]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(" ❱ ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(&app.ignore_input_text, Style::default().fg(Color::White)),
+            Span::styled("█", Style::default().fg(Color::Gray).add_modifier(Modifier::RAPID_BLINK)),
+        ]),
+    ];
+
+    let p = Paragraph::new(content)
+        .block(Block::default()
+            .title(Span::styled(" CUSTOM IGNORE PATTERN ", Style::default().add_modifier(Modifier::BOLD).fg(Color::Magenta)))
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Double)
+            .border_style(Style::default().fg(Color::Magenta)))
+        .style(Style::default().bg(Color::Rgb(10, 10, 30)));
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(p, area);
 }
