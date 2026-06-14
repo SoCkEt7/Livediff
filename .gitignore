@@ -18,10 +18,11 @@ build/
 *.tape
 livediff_demo
 write_examples.sh
-*.gif
 axum.rs
 compiler.rs
 curry.hs
 deployment.yaml
 hooks.tsx
 templates.cpp
+.internal/
+.config_local/

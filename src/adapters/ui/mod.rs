@@ -27,8 +27,8 @@ pub trait Component {
 // Global UI Palette - Sleek Dark Theme (Btop-spec)
 pub struct Palette;
 impl Palette {
-    pub const BG_DARK: Color = Color::Rgb(10, 10, 15);
-    pub const BG_PANEL: Color = Color::Rgb(22, 22, 29);
+    pub const BG_DARK: Color = Color::Black;
+    pub const BG_PANEL: Color = Color::Black;
     pub const BORDER_DARK: Color = Color::Rgb(45, 45, 58);
     pub const BORDER_FOCUS: Color = Color::Rgb(80, 80, 110);
 
@@ -69,26 +69,6 @@ pub fn get_file_type(path_str: &str) -> FileType {
     }
 }
 
-pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
-}
-
 pub fn interpolate_rgb(val: f32, start: (u8, u8, u8), end: (u8, u8, u8)) -> Color {
     let clamped = val.clamp(0.0, 1.0);
     let r = (start.0 as f32 + clamped * (end.0 as f32 - start.0 as f32)) as u8;
@@ -106,6 +86,11 @@ pub fn get_value_color(val: f32) -> Color {
 }
 
 pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorDomain) {
+    f.render_widget(
+        ratatui::widgets::Block::default()
+            .style(ratatui::style::Style::default().bg(Palette::BG_DARK)),
+        f.area(),
+    );
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -119,6 +104,8 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
 
     ui_state.stats_rect = chunks[1];
     ui_state.footer_rect = chunks[4];
+    ui_state.header_rect = chunks[0];
+    ui_state.logs_rect = chunks[3];
 
     // 1. Draw Header
     header::HeaderComponent.draw(f, chunks[0], ui_state, domain);
@@ -129,7 +116,10 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
     // 3. Draw Main area (File List + Diff View)
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .constraints([
+            Constraint::Percentage(ui_state.file_list_width_pct),
+            Constraint::Percentage(100 - ui_state.file_list_width_pct),
+        ])
         .split(chunks[2]);
 
     ui_state.file_list_rect = main_chunks[0];
@@ -145,7 +135,13 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
     footer::FooterComponent.draw(f, chunks[4], ui_state, domain);
 
     // 6. Draw Popups if active
-    if ui_state.ignore_input_visible {
+    if ui_state.editor_visible {
+        popups::PopupComponent::CodeEditor.draw(f, f.area(), ui_state, domain);
+    } else if ui_state.menu_visible {
+        popups::PopupComponent::GeneralMenu.draw(f, f.area(), ui_state, domain);
+    } else if ui_state.active_ignores_visible {
+        popups::PopupComponent::ActiveIgnores.draw(f, f.area(), ui_state, domain);
+    } else if ui_state.ignore_input_visible {
         popups::PopupComponent::IgnoreInput.draw(f, f.area(), ui_state, domain);
     } else if ui_state.ignore_menu_visible {
         popups::PopupComponent::IgnoreMenu.draw(f, f.area(), ui_state, domain);

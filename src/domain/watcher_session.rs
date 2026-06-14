@@ -19,6 +19,22 @@ impl<F: FileSystemPort> WatcherSession<F> {
         Self { fs, diff_engine: DiffEngine::new(), file_cache: HashMap::new(), max_size, root_path }
     }
 
+    pub fn remove_file(&mut self, path: &std::path::Path) {
+        self.file_cache.remove(path);
+    }
+
+    pub fn file_count(&self) -> usize {
+        self.file_cache.len()
+    }
+
+    pub fn get_cached(&self, path: &PathBuf) -> Option<String> {
+        self.file_cache.get(path).cloned()
+    }
+
+    pub fn insert_cached(&mut self, path: PathBuf, content: String) {
+        self.file_cache.insert(path, content);
+    }
+
     pub async fn process_raw_event(&mut self, path: &PathBuf) -> Option<FileModification> {
         let meta = self.fs.metadata(path).await.ok()?;
         if !meta.is_file || meta.len > self.max_size {

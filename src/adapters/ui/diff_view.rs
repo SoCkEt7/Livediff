@@ -21,14 +21,69 @@ impl Component for DiffComponent {
         let visible_mods: Vec<_> =
             ctx.modifications.iter().filter(|m| !ctx.is_ignored(&m.path)).collect();
 
-        let mut text = Text::default();
-
         if visible_mods.is_empty() {
-            text.lines.push(Line::from(vec![Span::styled(
-                " No active changes detected. Monitoring directory... ",
-                Style::default().fg(Palette::TEXT_MUTED),
-            )]));
-        } else if let Some(m) = visible_mods.get(state.selected_index) {
+            let phase = (state.anim_frame as f32 * 0.08) % 1.0;
+            let logo = tui_big_text::BigText::builder()
+                .pixel_size(tui_big_text::PixelSize::Sextant)
+                .style(Style::default().fg(Palette::PRIMARY))
+                .lines(vec![" LIVEDIF ".to_string().into()])
+                .build();
+
+            // Calculate center position for the logo
+            let logo_width = 40; // Approx
+            let logo_height = 5;
+            let center_area = Rect::new(
+                area.x + area.width.saturating_sub(logo_width) / 2,
+                area.y + area.height.saturating_sub(logo_height) / 2,
+                logo_width.min(area.width),
+                logo_height.min(area.height),
+            );
+
+            f.render_widget(logo, center_area);
+
+            let sub_text = vec![
+                Line::from(""),
+                Line::from(tui_shimmer::shimmer_spans_with_style_at_phase(
+                    " No active changes detected. Monitoring directory... ",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                    phase,
+                )),
+            ];
+            let sub_paragraph =
+                Paragraph::new(sub_text).alignment(ratatui::layout::Alignment::Center);
+            let sub_area = Rect::new(area.x, center_area.bottom(), area.width, 2);
+            f.render_widget(sub_paragraph, sub_area);
+
+            // Draw border even when empty
+            let border_color =
+                if state.ignore_input_visible || state.ignore_menu_visible || state.help_visible {
+                    Palette::BORDER_DARK
+                } else {
+                    Palette::BORDER_FOCUS
+                };
+
+            let title_spans = tui_shimmer::shimmer_spans_with_style_at_phase(
+                " ◈ DIFF PREVIEW ",
+                Style::default()
+                    .fg(Palette::ACCENT)
+                    .add_modifier(Modifier::BOLD)
+                    .bg(Palette::BG_DARK),
+                phase,
+            );
+
+            f.render_widget(
+                Block::default()
+                    .title(Line::from(title_spans))
+                    .borders(Borders::ALL)
+                    .border_type(ratatui::widgets::BorderType::Rounded)
+                    .border_style(Style::default().fg(border_color)),
+                area,
+            );
+            return;
+        }
+
+        let mut text = Text::default();
+        if let Some(m) = visible_mods.get(state.selected_index) {
             let ft = get_file_type(&m.path);
             let header_style = if m.is_binary {
                 Style::default().fg(Color::Rgb(10, 10, 15)).bg(Color::Rgb(220, 0, 220))
@@ -51,6 +106,7 @@ impl Component for DiffComponent {
             } else {
                 format!("{:.2} KB", m.size as f64 / 1024.0)
             };
+
             text.lines.push(Line::from(vec![
                 Span::styled(
                     format!(" SIZE: {} ", size_str),
@@ -64,6 +120,7 @@ impl Component for DiffComponent {
                     Style::default().fg(Palette::TEXT_MUTED),
                 ),
             ]));
+
             text.lines.push(Line::from(""));
 
             state.update_highlighting(ctx);
@@ -94,6 +151,7 @@ impl Component for DiffComponent {
                         Style::default().fg(Palette::TEXT_MUTED)
                     }
                 };
+
                 if let Some(bg) = bg_color {
                     prefix_style = prefix_style.bg(bg);
                 }
@@ -154,21 +212,22 @@ impl Component for DiffComponent {
                 Palette::BORDER_FOCUS
             };
 
-        let title_line = Line::from(vec![Span::styled(
+        let phase = (state.anim_frame as f32 * 0.08) % 1.0;
+        let title_spans = tui_shimmer::shimmer_spans_with_style_at_phase(
             " ◈ DIFF PREVIEW ",
-            Style::default().fg(Palette::ACCENT).add_modifier(Modifier::BOLD),
-        )]);
+            Style::default().fg(Palette::ACCENT).add_modifier(Modifier::BOLD).bg(Palette::BG_DARK),
+            phase,
+        );
 
         let p = Paragraph::new(text)
             .block(
                 Block::default()
-                    .title(title_line)
+                    .title(Line::from(title_spans))
                     .borders(Borders::ALL)
                     .border_type(ratatui::widgets::BorderType::Rounded)
                     .border_style(Style::default().fg(border_color)),
             )
             .scroll(state.diff_scroll);
-
         f.render_widget(p, area);
     }
 }

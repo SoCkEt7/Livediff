@@ -14,6 +14,8 @@ pub struct IgnoreEngine {
     pub all: bool,
     pub no_ignore_parent: bool,
     pub no_ignore_vcs: bool,
+    pub respect_vcs: bool,
+    pub ignore_vcs_files: bool,
 }
 
 impl IgnoreEngine {
@@ -32,6 +34,8 @@ impl IgnoreEngine {
             all,
             no_ignore_parent,
             no_ignore_vcs,
+            respect_vcs: !no_ignore,
+            ignore_vcs_files: false,
         };
 
         for pattern in ignore_patterns {
@@ -129,6 +133,10 @@ impl IgnoreEngine {
             {
                 return true;
             }
+
+            if self.ignore_vcs_files && path_str.ends_with(".gitignore") {
+                return true;
+            }
         }
 
         // 1. Check custom glob patterns and runtime ignore list
@@ -142,7 +150,7 @@ impl IgnoreEngine {
         }
 
         // 2. Check VCS ignore files (.gitignore, .ignore, etc.)
-        if !self.no_ignore && !self.all {
+        if self.respect_vcs && !self.all {
             match self.gitignore.matched(relative_path, is_dir) {
                 ignore::Match::Ignore(_) => return true,
                 ignore::Match::None => {}
@@ -153,8 +161,18 @@ impl IgnoreEngine {
         false
     }
 
+    pub fn toggle_vcs_respect(&mut self) {
+        self.respect_vcs = !self.respect_vcs;
+    }
+
     pub fn add_ignore(&mut self, pattern: String) {
         self.ignore_list.insert(pattern);
         self.rebuild_globset();
+    }
+
+    pub fn remove_ignore(&mut self, pattern: &str) {
+        if self.ignore_list.remove(pattern) {
+            self.rebuild_globset();
+        }
     }
 }

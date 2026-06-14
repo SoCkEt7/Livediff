@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tokio::sync::mpsc;
 
 use crate::app::Event;
+use crate::domain::interfaces::FileSystemPort;
 
 #[derive(Clone)]
 pub struct WatcherConfig {
@@ -62,50 +63,143 @@ impl FileMonitor {
 
         // Initial Scan
         let _ = tx.send(Event::Log("Performing initial scan...".to_string())).await;
-        let mut walk_stack = vec![root_path.clone()];
-        while let Some(dir) = walk_stack.pop() {
-            if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
-                while let Some(entry) = entries.next_entry().await.unwrap_or(None) {
-                    let path = entry.path();
-                    let relative_path = path.strip_prefix(&root_path).unwrap_or(&path);
 
-                    let is_dir = entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false);
-                    let is_ignored = if let Ok(engine) = self.config.ignore_engine.read() {
-                        engine.is_ignored(&path, relative_path, is_dir)
-                    } else {
-                        false
-                    };
+        let root_path_clone = root_path.clone();
+        let ignore_engine_clone = self.config.ignore_engine.clone();
 
-                    if is_ignored {
-                        continue;
+        let paths = tokio::task::spawn_blocking(move || {
+            let mut paths = Vec::new();
+            let engine = match ignore_engine_clone.read() {
+                Ok(e) => e,
+                Err(_) => return paths,
+            };
+
+            let mut builder = ignore::WalkBuilder::new(&root_path_clone);
+            builder.hidden(!engine.all); // ignores hidden files if all is false
+            builder.parents(!engine.no_ignore_parent);
+            builder.ignore(!engine.no_ignore);
+            builder.git_ignore(!engine.no_ignore_vcs);
+            builder.git_exclude(!engine.no_ignore_vcs);
+            builder.git_global(!engine.no_ignore_vcs);
+
+            let walker = builder.build();
+            for entry in walker.flatten() {
+                let path = entry.path().to_path_buf();
+                if path == root_path_clone {
+                    continue;
+                }
+                let relative_path = path.strip_prefix(&root_path_clone).unwrap_or(&path);
+                let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+
+                let is_ignored = engine.is_ignored(&path, relative_path, is_dir);
+                if !is_ignored && !is_dir {
+                    paths.push(path);
+                }
+            }
+            paths
+        })
+        .await
+        .unwrap_or_default();
+
+        let total_files = paths.len();
+        let _ = tx.send(Event::Log(format!("Found {} files to check.", total_files))).await;
+
+        let mut join_set = tokio::task::JoinSet::new();
+        for path in paths {
+            let old_content = session.get_cached(&path).unwrap_or_default();
+            let max_size = self.config.max_size;
+
+            join_set.spawn(async move {
+                let fs = crate::adapters::fs_adapter::TokioFileSystem;
+                let meta = match fs.metadata(&path).await {
+                    Ok(m) => m,
+                    Err(_) => return None,
+                };
+                if !meta.is_file || meta.len > max_size {
+                    return None;
+                }
+
+                let bytes = match fs.read_file(&path).await {
+                    Ok(b) => b,
+                    Err(_) => return None,
+                };
+
+                let (is_binary, new_content) = match String::from_utf8(bytes) {
+                    Ok(s) => (false, s),
+                    Err(_) => (true, "[Binary File]".to_string()),
+                };
+
+                if new_content == old_content && !old_content.is_empty() {
+                    return Some((path, new_content, None));
+                }
+
+                let diff_engine = crate::domain::diff_engine::DiffEngine::new();
+                let diff_result = if is_binary {
+                    crate::domain::diff_engine::DiffResult {
+                        lines: vec![crate::domain::diff_engine::DiffLine {
+                            change_type: crate::domain::diff_engine::LineChangeType::Context,
+                            content: "(Binary file content hidden)".to_string(),
+                        }],
+                        added: 0,
+                        deleted: 0,
                     }
+                } else {
+                    diff_engine.compute_diff(&old_content, &new_content)
+                };
 
-                    let meta = match entry.metadata().await {
-                        Ok(m) => m,
-                        Err(_) => continue,
-                    };
+                let relative_path = path.to_string_lossy().to_string();
+                let modif = crate::domain::entities::FileModification {
+                    path: relative_path,
+                    timestamp: meta.modified,
+                    size: meta.len,
+                    added: diff_result.added,
+                    deleted: diff_result.deleted,
+                    diff_lines: diff_result.lines,
+                    is_binary,
+                };
 
-                    if meta.is_dir() {
-                        walk_stack.push(path);
-                        continue;
-                    }
+                Some((path, new_content, Some(modif)))
+            });
+        }
 
-                    if meta.is_file()
-                        && let Some(modif) = session.process_raw_event(&path).await
-                    {
-                        let _ = tx.send(Event::FileChanged(modif)).await;
-                    }
+        while let Some(res) = join_set.join_next().await {
+            if let Ok(Some((path, new_content, opt_modif))) = res {
+                session.insert_cached(path, new_content);
+                if let Some(mut modif) = opt_modif {
+                    let path_buf = std::path::PathBuf::from(&modif.path);
+                    let relative_path = path_buf.strip_prefix(&root_path).unwrap_or(&path_buf);
+                    modif.path = relative_path.to_string_lossy().to_string();
+
+                    let _ = tx
+                        .send(Event::FileChanged {
+                            modification: modif,
+                            total_files: session.file_count(),
+                        })
+                        .await;
                 }
             }
         }
-        let _ = tx.send(Event::Log("Initial scan complete.".to_string())).await;
+
+        let _ = tx.send(Event::TotalFilesUpdated(session.file_count())).await;
+        let _ = tx
+            .send(Event::Log(format!(
+                "Initial scan complete. Monitoring {} files.",
+                session.file_count()
+            )))
+            .await;
 
         while let Some(event) = notify_rx.recv().await {
             if matches!(event.kind, EventKind::Remove(_)) {
                 for path in event.paths {
+                    session.remove_file(&path);
                     let relative_path = path.strip_prefix(&root_path).unwrap_or(&path);
                     let path_str = relative_path.to_string_lossy().to_string();
-                    let _ = tx.send(Event::FileDeleted(path_str)).await;
+                    let _ = tx
+                        .send(Event::FileDeleted {
+                            path: path_str,
+                            total_files: session.file_count(),
+                        })
+                        .await;
                 }
             } else if matches!(
                 event.kind,
@@ -128,7 +222,12 @@ impl FileMonitor {
                     }
 
                     if let Some(modif) = session.process_raw_event(&path).await {
-                        let _ = tx.send(Event::FileChanged(modif)).await;
+                        let _ = tx
+                            .send(Event::FileChanged {
+                                modification: modif,
+                                total_files: session.file_count(),
+                            })
+                            .await;
                     }
                 }
             }

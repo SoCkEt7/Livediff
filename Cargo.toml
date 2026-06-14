@@ -1,6 +1,6 @@
 [package]
 name = "livediff"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["Antonin Nivoche <antonin.niv@gmail.com>"]
 description = "Real-time file monitoring with beautiful diff visualization in the terminal."
@@ -14,6 +14,10 @@ readme = "README.md"
 # TUI and Terminal
 ratatui = "0.30.0"
 crossterm = "0.29.0"
+tui-shimmer = "0.1"
+ratatui-code-editor = "0.0.4"
+tui-overlay = "0.1.2"
+tui-big-text = "0.8.4"
 
 # Async and File System
 tokio = { version = "1.49.0", features = ["full"] }

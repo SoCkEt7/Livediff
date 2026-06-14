@@ -28,26 +28,40 @@ print_banner() {
 cleanup_previous() {
   echo "Cleaning up previous installations..."
 
-  # Check for pnpm global bin directory
+  # Check for pnpm global bin directory safely
   if command -v pnpm >/dev/null 2>&1; then
-    PNPM_BIN=$(pnpm root -g 2>/dev/null)/../../bin
-    for b in Livediff livediff; do
-      if [ -L "$PNPM_BIN/$b" ]; then
-        echo "  Removing previous pnpm link ($b)..."
-        rm -f "$PNPM_BIN/$b"
-      fi
-    done
+    PNPM_ROOT=$(pnpm root -g 2>/dev/null)
+    if [ -n "$PNPM_ROOT" ]; then
+      PNPM_BIN="$PNPM_ROOT/../../bin"
+      for b in Livediff livediff; do
+        if [ -n "$PNPM_BIN" ] && [ -L "$PNPM_BIN/$b" ]; then
+          echo "  Removing previous pnpm link ($b)..."
+          rm -f "$PNPM_BIN/$b"
+        fi
+      done
+    fi
   fi
 
-  # Check for npm global installations
+  # Check for npm global installations safely
   if command -v npm >/dev/null 2>&1; then
-    NPM_BIN=$(npm bin -g 2>/dev/null)
-    for b in Livediff livediff; do
-      if [ -f "$NPM_BIN/$b" ] || [ -L "$NPM_BIN/$b" ]; then
-        echo "  Removing previous npm installation ($b)..."
-        npm uninstall -g "$b" 2>/dev/null || true
-      fi
-    done
+    NPM_BIN=""
+    NPM_PREFIX=$(npm config get prefix 2>/dev/null)
+    if [ -n "$NPM_PREFIX" ]; then
+      NPM_BIN="$NPM_PREFIX/bin"
+    fi
+    if [ -z "$NPM_BIN" ]; then
+      NPM_BIN=$(npm bin -g 2>/dev/null)
+    fi
+
+    if [ -n "$NPM_BIN" ]; then
+      for b in Livediff livediff; do
+        if [ -f "$NPM_BIN/$b" ] || [ -L "$NPM_BIN/$b" ]; then
+          echo "  Removing previous npm installation ($b)..."
+          npm uninstall -g "$b" 2>/dev/null || true
+          rm -f "$NPM_BIN/$b"
+        fi
+      done
+    fi
   fi
 
   # Remove from common bin locations
@@ -60,15 +74,14 @@ cleanup_previous() {
     done
   done
 
-  # Remove legacy aliases
+  # Remove legacy aliases pointing to livediff or Livediff (like custom 'ld' alias)
   for RC_FILE in ~/.bashrc ~/.zshrc ~/.profile ~/.bash_profile; do
     if [ -f "$RC_FILE" ]; then
-      for b in Livediff livediff; do
-        if grep -q "alias $b=" "$RC_FILE" 2>/dev/null; then
-          echo "  Removing old alias ($b) from $RC_FILE..."
-          sed -i.bak "/alias $b=/d" "$RC_FILE" 2>/dev/null || sed -i '' "/alias $b=/d" "$RC_FILE" 2>/dev/null
-        fi
-      done
+      if grep -qE "alias [a-zA-Z0-9_-]+=['\"][lL]ivediff['\"]" "$RC_FILE" 2>/dev/null; then
+        echo "  Removing old alias pointing to livediff from $RC_FILE..."
+        sed -i -E "/alias [a-zA-Z0-9_-]+=['\"][lL]ivediff['\"]/d" "$RC_FILE" 2>/dev/null || \
+        sed -i "" -E "/alias [a-zA-Z0-9_-]+=['\"][lL]ivediff['\"]/d" "$RC_FILE" 2>/dev/null
+      fi
     fi
   done
 
@@ -133,7 +146,7 @@ install_livediff() {
     for RC_FILE in ~/.bashrc ~/.zshrc ~/.profile ~/.bash_profile; do
       if [ -f "$RC_FILE" ]; then
         # Remove any existing alias with the same name
-        sed -i.bak "/alias $custom_alias=/d" "$RC_FILE" 2>/dev/null || sed -i '' "/alias $custom_alias=/d" "$RC_FILE" 2>/dev/null
+        sed -i -E "/alias $custom_alias=/d" "$RC_FILE" 2>/dev/null || sed -i "" -E "/alias $custom_alias=/d" "$RC_FILE" 2>/dev/null
         echo "$ALIAS_CMD" >> "$RC_FILE"
         echo "  Added alias '$custom_alias' to $RC_FILE"
       fi
@@ -160,6 +173,9 @@ remove_livediff() {
 
   echo -e "\033[1;31mUninstalling livediff...\033[0m"
   echo
+
+  # Clean up aliases and legacy installations
+  cleanup_previous
 
   if ! command -v cargo >/dev/null 2>&1; then
     echo "Cargo not found. Checking binary directly..."
