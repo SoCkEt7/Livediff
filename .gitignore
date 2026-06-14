@@ -1,0 +1,22 @@
+node_modules/
+pnpm-lock.yaml
+*.log
+.DS_Store
+dist/
+build/
+.env*
+*.swp
+*.swo
+*~
+
+
+# Added by cargo
+
+/target
+.fastembed_cache/
+
+# Agents
+.agents/
+.claude/
+.gemini/
+.omc/

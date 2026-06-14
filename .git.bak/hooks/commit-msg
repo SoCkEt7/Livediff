@@ -1,0 +1,5 @@
+#!/bin/sh
+if grep -q "IA" "$1" || grep -q "AI" "$1"; then
+    echo "Error: Commit message contains 'IA' or 'AI', which is strictly forbidden."
+    exit 1
+fi

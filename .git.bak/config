@@ -1,0 +1,14 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://github.com/SoCkEt7/CodeLens.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+[remote "gitlab"]
+	url = https://oauth2:glpat--3vz0k3iTLWvCvxuvY0TRm86MQp1OjEH.01.0w01j5y6a@gl.nyxia.fr/hydra-ecosystem/CodeLens.git
+	fetch = +refs/heads/*:refs/remotes/gitlab/*

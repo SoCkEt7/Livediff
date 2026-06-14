@@ -1,0 +1,8 @@
+0000000000000000000000000000000000000000 267e2b6b70853f1466f76c43f36dd245a03c3c50 Antonin Nvh <antonin.nvh@gmail.com> 1760227253 +0200	clone: from https://github.com/SoCkEt7/CodeLens.git
+267e2b6b70853f1466f76c43f36dd245a03c3c50 ab1b50ffb967a9e1980991d34c86394318857c11 Antonin Nvh <antonin.nvh@gmail.com> 1760230052 +0200	commit: Fix blessed tags rendering and add bilingual copyright
+ab1b50ffb967a9e1980991d34c86394318857c11 f65315b3a01f3c8aeabdc1dc3ac5ac5dedd6f97d Antonin Nivoche <antonin.niv@gmail.com> 1772427724 +0100	commit: feat: migrate from Node.js to high-performance Rust implementation
+f65315b3a01f3c8aeabdc1dc3ac5ac5dedd6f97d 48d0e7f5f8f0ce723b5953190a159dbd92df8fa1 Antonin Nivoche <antonin.niv@gmail.com> 1776277496 +0200	commit: it u
+48d0e7f5f8f0ce723b5953190a159dbd92df8fa1 8e7692da311e9138ab6d63207c90cbafe253323d Antonin Nivoche <antonin.niv@gmail.com> 1776277703 +0200	commit (merge): Merge remote-tracking branch 'origin/master'
+8e7692da311e9138ab6d63207c90cbafe253323d 66df098f6211c49afb4749e13bbd19a1b4e95f8c Antonin Nivoche <antonin.niv@gmail.com> 1781437937 +0200	commit: chore: initialize LiveDiff architecture
+66df098f6211c49afb4749e13bbd19a1b4e95f8c efccde5546b99cd7d18a741fdc146d00e927553a Antonin Nivoche <antonin.niv@gmail.com> 1781446773 +0200	commit: chore: prepare for open source and configure dual-licensing
+efccde5546b99cd7d18a741fdc146d00e927553a 1695297e9ee4cc2cd9d4109dd123ddf3b0397109 Antonin Nivoche <antonin.niv@gmail.com> 1781447108 +0200	commit: docs: generate new demo gif for README

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Pre-commit hook to detect secrets using gitleaks
+if command -v gitleaks >/dev/null 2>&1; then
+  # Run gitleaks protect on staged changes
+  gitleaks protect -v --staged
+  if [ $? -ne 0 ]; then
+    echo "[SECURITY] Gitleaks detected potential secrets in your staged changes."
+    echo "Please remove the secrets or update .gitleaksignore before committing."
+    exit 1
+  fi
+fi
