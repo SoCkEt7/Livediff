@@ -41,7 +41,8 @@ impl Component for FileListComponent {
 
                 // Dynamic icon color based on change intensity
                 let change_intensity = ((m.added + m.deleted) as f32 / 100.0).min(1.0);
-                let icon_color = if is_selected { ft.color } else { super::get_value_color(change_intensity) };
+                let icon_color =
+                    if is_selected { ft.color } else { super::get_value_color(change_intensity) };
 
                 let mut line_spans = if is_selected {
                     tui_shimmer::shimmer_spans_with_style_at_phase(
@@ -54,10 +55,8 @@ impl Component for FileListComponent {
                 };
 
                 if m.is_binary {
-                    line_spans.push(Span::styled(
-                        " BINARY ",
-                        Style::default().fg(Color::Rgb(220, 0, 0)),
-                    ));
+                    line_spans
+                        .push(Span::styled(" BINARY ", Style::default().fg(Color::Rgb(220, 0, 0))));
                 } else {
                     line_spans.push(Span::styled(
                         format!("{:<6} ", ft.label),

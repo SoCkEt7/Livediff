@@ -278,7 +278,7 @@ async fn main() -> Result<()> {
                                     }
                                 } else if ui_state.settings_visible {
                                     let clicked_row = mouse.row as i32 - (pr.y as i32 + 1);
-                                    if clicked_row >= 0 && clicked_row < 3 {
+                                    if (0..3).contains(&clicked_row) {
                                         ui_state.settings_selected = clicked_row as usize;
                                         match ui_state.settings_selected {
                                             0 => {
@@ -290,7 +290,11 @@ async fn main() -> Result<()> {
                                                     ui_state.add_notification(
                                                         format!(
                                                             "Respect .gitignore: {}",
-                                                            if ui_state.respect_vcs_ignore { "ON" } else { "OFF" }
+                                                            if ui_state.respect_vcs_ignore {
+                                                                "ON"
+                                                            } else {
+                                                                "OFF"
+                                                            }
                                                         ),
                                                         app::ToastKind::Info,
                                                     );
@@ -306,7 +310,11 @@ async fn main() -> Result<()> {
                                                     ui_state.add_notification(
                                                         format!(
                                                             "Hide .gitignore: {}",
-                                                            if ui_state.ignore_gitignore_files { "ON" } else { "OFF" }
+                                                            if ui_state.ignore_gitignore_files {
+                                                                "ON"
+                                                            } else {
+                                                                "OFF"
+                                                            }
                                                         ),
                                                         app::ToastKind::Info,
                                                     );
@@ -722,7 +730,8 @@ async fn main() -> Result<()> {
                         crossterm::event::KeyCode::Enter => {
                             ui_state.remove_active_ignore(&domain);
                         }
-                        crossterm::event::KeyCode::Char('x') | crossterm::event::KeyCode::Char('X') => {
+                        crossterm::event::KeyCode::Char('x')
+                        | crossterm::event::KeyCode::Char('X') => {
                             ui_state.clear_active_ignores(&domain);
                         }
                         _ => {}
@@ -764,7 +773,11 @@ async fn main() -> Result<()> {
                                     ui_state.add_notification(
                                         format!(
                                             "Hide .gitignore: {}",
-                                            if ui_state.ignore_gitignore_files { "ON" } else { "OFF" }
+                                            if ui_state.ignore_gitignore_files {
+                                                "ON"
+                                            } else {
+                                                "OFF"
+                                            }
                                         ),
                                         app::ToastKind::Info,
                                     );

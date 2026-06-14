@@ -435,14 +435,14 @@ impl TerminalUiState {
                 self.ignore_menu_options.push("View/Remove Active Ignores".to_string());
                 self.ignore_menu_selected = 0;
                 self.show_popup(PopupKind::IgnoreMenu);
-                } else {
+            } else {
                 self.ignore_menu_options.clear();
                 self.ignore_menu_options.push("Ignore .*ignore files".to_string());
                 self.ignore_menu_options.push("Type custom pattern...".to_string());
                 self.ignore_menu_options.push("View/Remove Active Ignores".to_string());
                 self.ignore_menu_selected = 0;
                 self.show_popup(PopupKind::IgnoreMenu);
-                }
+            }
         }
     }
 

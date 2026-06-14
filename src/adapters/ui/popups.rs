@@ -112,7 +112,10 @@ fn draw_settings(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {
         ListItem::new(Line::from(vec![
             Span::raw(" 1. Respect .gitignore:   "),
             if state.respect_vcs_ignore {
-                Span::styled("[YES]", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "[YES]",
+                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::styled("[NO ]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
             },
@@ -120,7 +123,10 @@ fn draw_settings(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {
         ListItem::new(Line::from(vec![
             Span::raw(" 2. Hide .gitignore files: "),
             if state.ignore_gitignore_files {
-                Span::styled("[YES]", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "[YES]",
+                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::styled("[NO ]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
             },

@@ -52,17 +52,20 @@ impl Component for StatsComponent {
                 .bg(Palette::BG_DARK)
                 .add_modifier(Modifier::BOLD);
 
-            let mut spans = tui_shimmer::shimmer_spans_with_style_at_phase(label, shimmer_style, phase);
+            let mut spans =
+                tui_shimmer::shimmer_spans_with_style_at_phase(label, shimmer_style, phase);
             spans.push(Span::styled(*icon, Style::default().fg(*color)));
-            spans.push(Span::styled(value, Style::default().fg(*color).add_modifier(Modifier::BOLD)));
+            spans.push(Span::styled(
+                value,
+                Style::default().fg(*color).add_modifier(Modifier::BOLD),
+            ));
 
-            let p = Paragraph::new(Line::from(spans))
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(ratatui::widgets::BorderType::Rounded)
-                        .border_style(Style::default().fg(Palette::BORDER_DARK)),
-                );
+            let p = Paragraph::new(Line::from(spans)).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(ratatui::widgets::BorderType::Rounded)
+                    .border_style(Style::default().fg(Palette::BORDER_DARK)),
+            );
             f.render_widget(p, chunks[i]);
         }
 
@@ -129,13 +132,12 @@ impl Component for StatsComponent {
             Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
         ));
 
-        let sparkline_paragraph = Paragraph::new(Line::from(sparkline_spans))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(ratatui::widgets::BorderType::Rounded)
-                    .border_style(Style::default().fg(Palette::BORDER_DARK)),
-            );
+        let sparkline_paragraph = Paragraph::new(Line::from(sparkline_spans)).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(Palette::BORDER_DARK)),
+        );
         f.render_widget(sparkline_paragraph, chunks[4]);
     }
 }

@@ -21,6 +21,19 @@ Try the interactive demo directly in your browser! Visit [socket7.github.io/Live
 cargo install livediff
 ```
 
+
+## 🎯 When to use Livediff
+
+Use Livediff when you want to keep a live view of file changes while another process is running:
+
+- code generators and template systems;
+- formatters and migration scripts;
+- refactors that touch many files;
+- documentation or config changes;
+- terminal-first workflows where a GUI diff app is too heavy.
+
+Livediff does not replace Git. It complements `git diff` by showing changes as they happen.
+
 ## 🚀 Features
 
 - **Real-Time Monitoring**: Instantly detect file changes using native OS filesystem events (powered by `notify`).
