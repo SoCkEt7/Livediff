@@ -7,23 +7,11 @@
       "skillPath": "plugins/backend-development/skills/architecture-patterns/SKILL.md",
       "computedHash": "a66aaa5aa49b75bec12b6270dcde8794b1f0cc75fbb9ecb999e43f8b723b461f"
     },
-    "dev-to-hashnode": {
-      "source": "jonathimer/devmarketing-skills",
-      "sourceType": "github",
-      "skillPath": "skills/dev-to-hashnode/SKILL.md",
-      "computedHash": "354dc652ee87e0343b088c7ea86f8890f17a5a50c2330f79804caefdf6fa996a"
-    },
     "find-skills": {
       "source": "bytedance/deer-flow",
       "sourceType": "github",
       "skillPath": "skills/public/find-skills/SKILL.md",
       "computedHash": "202da6ad9e3c65949fa70371e89b1f55a1f5bd6d11b20b4491af17de495a0caf"
-    },
-    "github-readme": {
-      "source": "thatrebeccarae/claude-marketing",
-      "sourceType": "github",
-      "skillPath": "skills/github-readme/SKILL.md",
-      "computedHash": "9a47f3f0985e846562ebdf977e83ec034e66aa490b372c86cb966d36e6d79945"
     },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
@@ -48,12 +36,6 @@
       "sourceType": "github",
       "skillPath": "skills/open-source-prep/SKILL.md",
       "computedHash": "c90294d1c3c5ab6458d1801af71a7c4279f63d54e56e1304d8cf8274119d6c37"
-    },
-    "social-media-marketing": {
-      "source": "jk-0001/skills",
-      "sourceType": "github",
-      "skillPath": "social-media-marketing/SKILL.md",
-      "computedHash": "cc48dc7731236d1114c5f280ac262f51be7320be330e72ae39d1c41332bc369c"
     }
   }
 }
