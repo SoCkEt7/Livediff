@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-06-14
+
+### Fixed
+- Corrected GitHub release artifact packaging to use the lowercase `livediff` binary name produced by Cargo.
+- Aligned Cargo metadata with the public repository and interactive showcase URLs.
+
+### Changed
+- Reworked the README around concrete live-diff workflows, clearer installation, comparison guidance, and contributor entry points.
+- Added practical use-case documentation plus issue templates for bugs and feature requests.
+
 ## [0.2.0] - 2026-06-14
 
 ### Added
