@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible Livediff problem
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Livediff version
+      placeholder: livediff --version
+  - type: input
+    id: os
+    attributes:
+      label: OS / terminal
+      placeholder: macOS Terminal, Windows Terminal, GNOME Terminal, etc.

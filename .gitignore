@@ -1,0 +1,32 @@
+node_modules/
+pnpm-lock.yaml
+*.log
+.DS_Store
+dist/
+build/
+.env*
+*.swp
+*.swo
+*~
+
+
+# Added by cargo
+
+/target
+.fastembed_cache/
+
+*.tape
+livediff_demo
+write_examples.sh
+axum.rs
+compiler.rs
+curry.hs
+deployment.yaml
+hooks.tsx
+templates.cpp
+.internal/
+.config_local/
+
+# Local runtime artifacts
+.omc/
+.playwright-mcp/
