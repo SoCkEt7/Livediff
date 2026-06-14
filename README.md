@@ -3,7 +3,7 @@
 **Live terminal diffs while files change.** Livediff is a lightweight Rust TUI companion to `git diff` for generators, refactors, migrations, formatters, and config edits.
 
 <p align="center">
-  <img src="demo.gif" alt="Livediff showing real-time file diffs in the terminal" width="800">
+<img src="demo.gif" alt="Livediff showing real-time file diffs in the terminal" width="800">
 </p>
 
 [![CI](https://github.com/SoCkEt7/Livediff/actions/workflows/ci.yml/badge.svg)](https://github.com/SoCkEt7/Livediff/actions)
@@ -79,6 +79,25 @@ See [docs/use-cases.md](docs/use-cases.md) for practical workflows:
 cargo install livediff
 ```
 
+### Via Homebrew
+
+A Homebrew formula for Livediff is planned — track the roadmap for updates.
+
+Once the tap is published, installation will be:
+
+```bash
+brew tap socket7/livediff
+brew install livediff
+```
+
+To upgrade later:
+
+```bash
+brew upgrade livediff
+```
+
+> **Note:** Until the tap is live, install via Cargo (above) or grab a pre-built binary below. Follow [#5](https://github.com/SoCkEt7/Livediff/issues/5) for Homebrew packaging progress.
+
 ### Pre-built binaries
 
 Tagged releases provide Linux, macOS, and Windows archives when available:
@@ -94,13 +113,13 @@ Arguments:
   [PATH]  The path to monitor [default: .]
 
 Options:
-  -i, --ignore <IGNORE>   Ignore files matching this glob pattern (can be used multiple times)
-      --show-hidden       Show hidden files
-      --no-ignore         Do not respect ignore files (.gitignore, .ignore, etc.)
-      --no-ignore-parent  Do not respect ignore files in parent directories
-      --no-ignore-vcs     Do not respect git/VCS ignore files (.gitignore, etc.)
-  -h, --help              Print help
-  -V, --version           Print version
+  -i, --ignore <IGNORE>  Ignore files matching this glob pattern (can be used multiple times)
+      --show-hidden      Show hidden files
+      --no-ignore        Do not respect ignore files (.gitignore, .ignore, etc.)
+      --no-ignore-parent Do not respect ignore files in parent directories
+      --no-ignore-vcs    Do not respect git/VCS ignore files (.gitignore, etc.)
+  -h, --help             Print help
+  -V, --version          Print version
 ```
 
 ## Roadmap
