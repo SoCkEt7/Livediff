@@ -70,15 +70,15 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          staging="Livediff-${{ github.ref_name }}-${{ matrix.target }}"
+          staging="livediff-${{ github.ref_name }}-${{ matrix.target }}"
           mkdir -p "$staging"
           
           if [ "${{ matrix.os }}" = "windows-2019" ]; then
-            cp "target/${{ matrix.target }}/release/Livediff.exe" "$staging/"
+            cp "target/${{ matrix.target }}/release/livediff.exe" "$staging/"
             7z a "$staging.zip" "$staging"
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
           else
-            cp "target/${{ matrix.target }}/release/Livediff" "$staging/"
+            cp "target/${{ matrix.target }}/release/livediff" "$staging/"
             tar czf "$staging.tar.gz" "$staging"
             echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           fi
