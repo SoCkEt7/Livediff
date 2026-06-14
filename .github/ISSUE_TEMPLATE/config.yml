@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/socket7/livediff/discussions
+    about: Please ask questions, share tips, and discuss ideas in our Discussions forum.
+  - name: Documentation
+    url: https://github.com/socket7/livediff/tree/main/docs
+    about: Check our docs for installation, usage, architecture, and development guides.

@@ -1,0 +1,88 @@
+name: Bug Report
+description: File a bug report to help us improve livediff
+title: "[BUG] "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When I run livediff in my project, the TUI flickers rapidly...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Create a project with `cargo new test`
+        2. Run `livediff` in the project directory
+        3. Edit a file and save
+        4. Observe that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The diff should update smoothly without flickering.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Recordings
+      description: If applicable, add screenshots or terminal recordings to help explain the problem.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of livediff are you running?
+      placeholder: Run `cargo install --list | grep livediff` or check Cargo.toml
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - WSL
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: terminal
+    attributes:
+      label: Terminal Emulator
+      description: What terminal emulator are you using? (e.g., iTerm2, gnome-terminal, Windows Terminal, Alacritty)
+      placeholder: Alacritty 0.13
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Please copy and paste any relevant log output or error messages. This will be automatically formatted into code.
+      render: shell
+    validations:
+      required: false
