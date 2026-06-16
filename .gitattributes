@@ -1,0 +1,6 @@
+# Language detection overrides
+docs/index.html linguist-documentation
+demo.html linguist-documentation
+# Metrics optimization
+target/ linguist-vendored
+Cargo.lock linguist-generated
