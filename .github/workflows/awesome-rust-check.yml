@@ -1,0 +1,35 @@
+name: Awesome Rust Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Rust Percentage (Dry Run)
+        run: |
+          # Use cloc to estimate Linguist's view (approximate)
+          # We want Rust to be > 90% typically for these lists
+          TOTAL_CODE=$(cloc . --exclude-dir=target,.git,.fastembed_cache,.omx,.internal,.claude --json | jq '.SUM.code')
+          RUST_CODE=$(cloc . --exclude-dir=target,.git,.fastembed_cache,.omx,.internal,.claude --json | jq '.Rust.code // 0')
+          PERCENTAGE=$(echo "scale=2; $RUST_CODE * 100 / $TOTAL_CODE" | bc)
+          echo "Estimated Rust Percentage: $PERCENTAGE%"
+          if (( $(echo "$PERCENTAGE < 90" | bc -l) )); then
+            echo "Warning: Rust percentage is below 90%. Awesome-rust might reject it."
+          fi
+
+      - name: Check Metrics (GitHub API)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          STARS=$(gh repo view ${{ github.repository }} --json stargazerCount -q .stargazerCount)
+          echo "Current Stars: $STARS"
+          if [ "$STARS" -lt 50 ]; then
+            echo "Warning: Stars ($STARS) < 50. Awesome-rust requires 50+."
+          fi
