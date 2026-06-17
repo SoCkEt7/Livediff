@@ -78,7 +78,7 @@ jobs:
         run: |
           staging="livediff-${{ github.ref_name }}-${{ matrix.target }}"
           mkdir -p "$staging"
-          
+
           if [ "${{ matrix.os }}" = "windows-2019" ]; then
             cp "target/${{ matrix.target }}/release/livediff.exe" "$staging/"
             7z a "$staging.zip" "$staging"
