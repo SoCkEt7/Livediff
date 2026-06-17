@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Livediff 👁️ - Interactive Web Showcase</title>
-    
+
     <!-- Modern Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
+
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -21,7 +21,7 @@
             --bg-terminal: hsl(220, 20%, 3%);
             --border-glow: hsla(250, 85%, 65%, 0.15);
             --border-color: rgba(255, 255, 255, 0.08);
-            
+
             --primary: hsl(250, 85%, 65%);
             --primary-glow: hsla(250, 85%, 65%, 0.25);
             --cyan: hsl(190, 95%, 50%);
@@ -30,15 +30,15 @@
             --success-glow: hsla(145, 75%, 45%, 0.2);
             --warning: hsl(35, 80%, 55%);
             --danger: hsl(355, 80%, 55%);
-            
+
             --text-main: hsl(210, 40%, 98%);
             --text-muted: hsl(215, 15%, 70%);
             --text-dark: hsl(220, 15%, 45%);
-            
+
             --radius-lg: 20px;
             --radius-md: 12px;
             --radius-sm: 6px;
-            
+
             --font-main: 'Inter', -apple-system, sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
         }
@@ -53,7 +53,7 @@
         body {
             font-family: var(--font-main);
             background-color: var(--bg-main);
-            background-image: 
+            background-image:
                 radial-gradient(at 10% 20%, hsla(250, 85%, 60%, 0.05) 0px, transparent 50%),
                 radial-gradient(at 90% 80%, hsla(190, 95%, 50%, 0.05) 0px, transparent 50%);
             color: var(--text-main);
@@ -266,7 +266,7 @@
             display: flex;
             flex-direction: column;
             height: 720px;
-            box-shadow: 
+            box-shadow:
                 0 20px 50px rgba(0, 0, 0, 0.6),
                 0 0 40px var(--border-glow);
             font-family: var(--font-mono);
@@ -509,7 +509,7 @@
 
         .tui-list-item-added { color: var(--success); width: 30px; font-weight: 700; text-align: right; }
         .tui-list-item-deleted { color: var(--danger); width: 30px; font-weight: 700; text-align: right; }
-        
+
         .tui-list-item-path {
             flex: 1;
             overflow: hidden;
@@ -705,7 +705,7 @@
                     <p>Real-time file monitoring with interactive TUI</p>
                 </div>
             </div>
-            
+
             <div class="controls">
                 <button class="btn" onclick="window.location.reload()">
                     <i class="fa-solid fa-arrows-rotate"></i> Reset Demo
@@ -971,12 +971,12 @@
 
         function updateUI() {
             const visibleFiles = getVisibleFiles();
-            
+
             // Render Stats
             let totalFiles = visibleFiles.length;
             let totalAdded = visibleFiles.reduce((acc, f) => acc + f.added, 0);
             let totalDeleted = visibleFiles.reduce((acc, f) => acc + f.deleted, 0);
-            
+
             document.getElementById("stat-files").textContent = totalFiles;
             document.getElementById("stat-added").textContent = `+${totalAdded}`;
             document.getElementById("stat-deleted").textContent = `-${totalDeleted}`;
@@ -990,7 +990,7 @@
             // Render File List
             const fileListEl = document.getElementById("file-list");
             fileListEl.innerHTML = "";
-            
+
             if (visibleFiles.length === 0) {
                 fileListEl.innerHTML = `<div style="padding: 10px; color: gray; text-align: center;">No active changes</div>`;
             } else {
@@ -998,7 +998,7 @@
                     const item = document.createElement("div");
                     item.className = `tui-list-item ${index === selectedIndex ? 'selected' : ''}`;
                     item.onclick = () => selectFile(index);
-                    
+
                     item.innerHTML = `
                         <div class="tui-list-item-icon"><i class="fa-brands ${file.iconClass}"></i></div>
                         <div class="tui-list-item-type">${file.type}</div>
@@ -1014,7 +1014,7 @@
             // Render Diff Content
             const diffViewerEl = document.getElementById("diff-viewer");
             diffViewerEl.innerHTML = "";
-            
+
             const activeFile = visibleFiles[selectedIndex];
             if (activeFile) {
                 // Header line inside TUI diff view
@@ -1031,7 +1031,7 @@
                 activeFile.diff.forEach(line => {
                     const lineEl = document.createElement("div");
                     lineEl.className = `diff-line ${line.type}`;
-                    
+
                     let sign = " ";
                     if (line.type === 'addition') sign = "+";
                     if (line.type === 'deletion') sign = "-";
@@ -1082,7 +1082,7 @@
         function simulateNewFileChange() {
             const pathName = `src/adapters/mock_adapter_${Math.floor(Math.random() * 100)}.rs`;
             const randomAdd = Math.floor(Math.random() * 20) + 1;
-            
+
             const newFile = {
                 name: pathName,
                 type: "RUST",
@@ -1131,11 +1131,11 @@
 
             const dialog = document.getElementById("ignore-dialog");
             const container = document.getElementById("ignore-options-container");
-            
+
             // Build options based on file path
             const options = [];
             options.push({ label: `Ignore exact file: ${activeFile.name}`, pattern: activeFile.name });
-            
+
             // Extract extension
             const extIdx = activeFile.name.lastIndexOf('.');
             if (extIdx > 0) {

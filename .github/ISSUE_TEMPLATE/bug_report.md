@@ -20,6 +20,6 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Environment:**
- - OS: [e.g. Linux, macOS, Windows]
- - Version of Livediff: [e.g. 0.1.0]
- - Terminal: [e.g. Alacritty, iTerm2]
+- OS: [e.g. Linux, macOS, Windows]
+- Version of Livediff: [e.g. 0.1.0]
+- Terminal: [e.g. Alacritty, iTerm2]

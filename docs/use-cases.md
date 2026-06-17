@@ -22,9 +22,9 @@ Use this for template systems, SDK generation, static site output, or any workfl
 
 1. Start Livediff on the generated output directory:
 
-   ```bash
-   livediff ./generated --ignore "*.tmp" --ignore "*.log"
-   ```
+    ```bash
+    livediff ./generated --ignore "*.tmp" --ignore "*.log"
+    ```
 
 2. Run the generator in another terminal.
 3. Watch for unexpected file churn, deleted files, or broad rewrites before accepting the update.
@@ -44,9 +44,9 @@ Run your migration generator in another terminal and keep Livediff open to see e
 
 1. Open the migrations directory:
 
-   ```bash
-   livediff ./migrations
-   ```
+    ```bash
+    livediff ./migrations
+    ```
 
 2. Generate the migration from your framework or migration tool.
 3. Check whether the live diff contains only the expected `CREATE`, `ALTER`, or index changes.
@@ -66,9 +66,9 @@ Useful before accepting a broad formatting, lint-fix, or codemod pass.
 
 1. Watch the source tree with build outputs ignored:
 
-   ```bash
-   livediff ./src --ignore "target/" --ignore "dist/"
-   ```
+    ```bash
+    livediff ./src --ignore "target/" --ignore "dist/"
+    ```
 
 2. Run the formatter, lint fix, or codemod in a second terminal.
 3. Use the file list to spot changes outside the intended package or module.
@@ -89,9 +89,9 @@ Good for documentation generators, config rewrites, or build tools that update l
 
 1. Watch the repository root with generated dependency directories ignored:
 
-   ```bash
-   livediff . --ignore "target/" --ignore "node_modules/" --ignore ".git/"
-   ```
+    ```bash
+    livediff . --ignore "target/" --ignore "node_modules/" --ignore ".git/"
+    ```
 
 2. Run the docs builder, static site generator, or config update command.
 3. Confirm the live diff matches the intended docs, lockfile, or manifest changes.
