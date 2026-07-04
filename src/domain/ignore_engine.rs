@@ -151,7 +151,7 @@ impl IgnoreEngine {
 
         // 2. Check VCS ignore files (.gitignore, .ignore, etc.)
         if self.respect_vcs && !self.all {
-            match self.gitignore.matched(relative_path, is_dir) {
+            match self.gitignore.matched_path_or_any_parents(relative_path, is_dir) {
                 ignore::Match::Ignore(_) => return true,
                 ignore::Match::None => {}
                 ignore::Match::Whitelist(_) => return false,
@@ -174,5 +174,27 @@ impl IgnoreEngine {
         if self.ignore_list.remove(pattern) {
             self.rebuild_globset();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gitignored_dir_contents_are_ignored() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "ignored_dir/\n").unwrap();
+
+        let mut engine = IgnoreEngine::new(false, false, false, false, &[]);
+        engine.load_vcs_ignores(tmp.path());
+
+        // Watch events arrive per file, so a directory rule has to match
+        // through the parent chain, not just against the exact path.
+        let inside = tmp.path().join("ignored_dir/sub/file.txt");
+        assert!(engine.is_ignored(&inside, Path::new("ignored_dir/sub/file.txt"), false));
+
+        let kept = tmp.path().join("kept.txt");
+        assert!(!engine.is_ignored(&kept, Path::new("kept.txt"), false));
     }
 }
