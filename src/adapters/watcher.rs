@@ -163,20 +163,8 @@ impl FileMonitor {
         }
 
         while let Some(res) = join_set.join_next().await {
-            if let Ok(Some((path, new_content, opt_modif))) = res {
+            if let Ok(Some((path, new_content, _))) = res {
                 session.insert_cached(path, new_content);
-                if let Some(mut modif) = opt_modif {
-                    let path_buf = std::path::PathBuf::from(&modif.path);
-                    let relative_path = path_buf.strip_prefix(&root_path).unwrap_or(&path_buf);
-                    modif.path = relative_path.to_string_lossy().to_string();
-
-                    let _ = tx
-                        .send(Event::FileChanged {
-                            modification: modif,
-                            total_files: session.file_count(),
-                        })
-                        .await;
-                }
             }
         }
 
