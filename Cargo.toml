@@ -16,7 +16,7 @@ readme = "README.md"
 ratatui = "0.30.0"
 crossterm = "0.29.0"
 tui-shimmer = "0.1"
-ratatui-code-editor = "0.0.4"
+ratatui-code-editor = "0.0.5"
 tui-overlay = "0.1.2"
 tui-big-text = "0.8.4"
 
