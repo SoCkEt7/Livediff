@@ -1872,9 +1872,9 @@ dependencies = [
 
 [[package]]
 name = "ratatui-code-editor"
-version = "0.0.4"
+version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b21a0bcd9cdca9aba7cbd8a4167858f9b34fef142164f2f83757f6a65bf9d1e7"
+checksum = "f3f3c251c7fea82ba183128af5f3dc3c2f1febc1eee24a781385634b1f2472f1"
 dependencies = [
  "anyhow",
  "arboard",
@@ -1882,6 +1882,7 @@ dependencies = [
  "ratatui-core",
  "ropey",
  "rust-embed",
+ "similar",
  "streaming-iterator",
  "tree-sitter",
  "tree-sitter-bash",
