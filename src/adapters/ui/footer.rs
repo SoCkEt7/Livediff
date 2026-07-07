@@ -56,6 +56,9 @@ impl Component for FooterComponent {
             Span::styled("M/? ", Style::default().fg(Palette::PRIMARY)),
             Span::styled("Menu/Help ", Style::default().fg(Palette::TEXT_BRIGHT)),
             Span::styled("│ ", Style::default().fg(Palette::BORDER_DARK)),
+            Span::styled("G ", Style::default().fg(Palette::PRIMARY)),
+            Span::styled("Git ", Style::default().fg(Palette::TEXT_BRIGHT)),
+            Span::styled("│ ", Style::default().fg(Palette::BORDER_DARK)),
             Span::styled("Q ", Style::default().fg(Palette::PRIMARY)),
             Span::styled("Quit ", Style::default().fg(Palette::TEXT_BRIGHT)),
         ]);

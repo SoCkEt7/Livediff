@@ -40,10 +40,46 @@ impl Component for HeaderComponent {
                 .bg(Palette::PRIMARY),
             phase,
         );
-        left_spans.push(Span::styled(
-            "",
-            Style::default().fg(Palette::PRIMARY).bg(Color::Rgb(40, 40, 55)),
-        ));
+
+        // Git branch indicator
+        if state.git_info.is_git_repo && !state.git_info.branch.is_empty() {
+            let branch_color = if state.git_info.dirty {
+                Color::Rgb(231, 76, 60) // Red when dirty
+            } else {
+                Color::Rgb(46, 204, 113) // Green when clean
+            };
+            left_spans.push(Span::styled(
+                "",
+                Style::default().fg(Palette::PRIMARY).bg(Color::Rgb(30, 30, 40)),
+            ));
+            let branch_display = if state.git_info.ahead > 0 || state.git_info.behind > 0 {
+                format!(
+                    "  {} ↑{}↓{} ",
+                    state.git_info.branch,
+                    state.git_info.ahead.min(99),
+                    state.git_info.behind.min(99)
+                )
+            } else {
+                format!("  {} ", state.git_info.branch)
+            };
+            left_spans.push(Span::styled(
+                branch_display,
+                Style::default()
+                    .fg(branch_color)
+                    .bg(Color::Rgb(30, 30, 40))
+                    .add_modifier(Modifier::BOLD),
+            ));
+            left_spans.push(Span::styled(
+                "",
+                Style::default().fg(Color::Rgb(30, 30, 40)).bg(Color::Rgb(40, 40, 55)),
+            ));
+        } else {
+            left_spans.push(Span::styled(
+                "",
+                Style::default().fg(Palette::PRIMARY).bg(Color::Rgb(40, 40, 55)),
+            ));
+        }
+
         left_spans.push(Span::styled(
             format!("  {} ", cwd),
             Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(40, 40, 55)),

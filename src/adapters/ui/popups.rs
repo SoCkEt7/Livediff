@@ -317,6 +317,10 @@ fn draw_help(f: &mut Frame<'_>, area: Rect) {
             Span::raw(" Toggle help menu"),
         ]),
         Line::from(vec![
+            Span::styled("  G / g          ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Refresh git branch / status info"),
+        ]),
+        Line::from(vec![
             Span::styled("  Q / q          ", Style::default().fg(Color::Rgb(241, 196, 15))),
             Span::raw(" Quit Livediff"),
         ]),

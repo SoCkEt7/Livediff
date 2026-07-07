@@ -54,6 +54,9 @@ async fn main() -> Result<()> {
         ui_state.add_log(warning);
     }
 
+    // Initialize git info
+    ui_state.update_git_info(&canonical_path);
+
     // Initialize Terminal
     let mut terminal = init_terminal()?;
 
@@ -176,6 +179,10 @@ async fn main() -> Result<()> {
                 ui_state.update_ram_usage();
                 ui_state.update_event_history(domain.events_count);
                 ui_state.update_notifications();
+                // Refresh git info every 60 ticks (~30s at 500ms)
+                if ui_state.anim_frame.is_multiple_of(60) {
+                    ui_state.update_git_info(&canonical_path);
+                }
                 let _ = terminal.draw(|f| adapters::ui::draw(f, &mut ui_state, &domain));
             }
             Event::Mouse(mouse) => {
@@ -827,6 +834,14 @@ async fn main() -> Result<()> {
                         }
                         crossterm::event::KeyCode::Char('i') => {
                             ui_state.toggle_ignore_menu(&domain);
+                        }
+                        crossterm::event::KeyCode::Char('g') | crossterm::event::KeyCode::Char('G') => {
+                            ui_state.update_git_info(&canonical_path);
+                            ui_state.add_log(format!(
+                                "Git: {} ({})",
+                                ui_state.git_info.branch,
+                                if ui_state.git_info.dirty { "dirty" } else { "clean" }
+                            ));
                         }
                         crossterm::event::KeyCode::Char('c') => {
                             ui_state.clear_all(&mut domain);
