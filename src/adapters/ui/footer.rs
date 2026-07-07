@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.
 
 use ratatui::{
     Frame,
@@ -25,7 +25,7 @@ impl Component for FooterComponent {
                 Style::default().add_modifier(Modifier::BOLD).fg(Palette::TEXT_BRIGHT),
             ),
             Span::styled("│ ", Style::default().fg(Palette::BORDER_DARK)),
-            Span::styled("© 2026 Antonin Nvh ", Style::default().fg(Palette::TEXT_MUTED)),
+            Span::styled("© 2026 Nyxia ", Style::default().fg(Palette::TEXT_MUTED)),
             Span::styled(" ", Style::default().fg(Palette::TEXT_BRIGHT)),
             Span::styled(" ", Style::default().fg(Color::Rgb(0, 119, 181))), // LinkedIn Blue
             Span::styled("│ ", Style::default().fg(Palette::BORDER_DARK)),

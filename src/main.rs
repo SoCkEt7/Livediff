@@ -835,7 +835,8 @@ async fn main() -> Result<()> {
                         crossterm::event::KeyCode::Char('i') => {
                             ui_state.toggle_ignore_menu(&domain);
                         }
-                        crossterm::event::KeyCode::Char('g') | crossterm::event::KeyCode::Char('G') => {
+                        crossterm::event::KeyCode::Char('g')
+                        | crossterm::event::KeyCode::Char('G') => {
                             ui_state.update_git_info(&canonical_path);
                             ui_state.add_log(format!(
                                 "Git: {} ({})",

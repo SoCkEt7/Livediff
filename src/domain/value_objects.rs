@@ -1,1 +1,1 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.

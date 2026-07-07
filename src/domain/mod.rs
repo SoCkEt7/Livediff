@@ -1,9 +1,9 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.
 
 pub mod diff_engine;
 pub mod entities;
+pub mod git_info;
 pub mod ignore_engine;
 pub mod interfaces;
 pub mod value_objects;
 pub mod watcher_session;
-pub mod git_info;
