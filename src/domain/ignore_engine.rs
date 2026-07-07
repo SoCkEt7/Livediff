@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::gitignore::{Gitignore, GitignoreBuilder};

@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.
 
 use crate::domain::diff_engine::DiffEngine;
 use crate::domain::entities::FileModification;

@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.
 
 use ratatui::{
     Frame,
@@ -434,7 +434,7 @@ fn draw_code_editor(f: &mut Frame<'_>, area: Rect, state: &mut TerminalUiState) 
         let block = Block::default()
             .title(Span::styled(title_text, border_style.add_modifier(Modifier::BOLD)))
             .borders(Borders::ALL)
-            .border_type(ratatui::widgets::BorderType::Rounded)
+            // plain
             .border_style(border_style)
             .style(Style::default().bg(Palette::BG_DARK));
 

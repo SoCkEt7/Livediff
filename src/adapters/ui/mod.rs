@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.
 
 use ratatui::{
     Frame,
@@ -24,7 +24,7 @@ pub trait Component {
     fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut Self::State, ctx: &Self::Context);
 }
 
-// Global UI Palette - Sleek Dark Theme (Btop-spec)
+// Global UI Palette - Sleek Dark Theme
 pub struct Palette;
 impl Palette {
     pub const BG_DARK: Color = Color::Black;
@@ -54,18 +54,18 @@ pub fn get_file_type(path_str: &str) -> FileType {
     let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
 
     match ext.as_str() {
-        "rs" => FileType { label: "RUST", icon: "", color: Color::Rgb(230, 80, 80) },
-        "toml" => FileType { label: "TOML", icon: "", color: Color::Rgb(80, 200, 120) },
+        "rs" => FileType { label: "RS", icon: "", color: Color::Rgb(230, 80, 80) },
+        "toml" => FileType { label: "TM", icon: "", color: Color::Rgb(80, 200, 120) },
         "json" | "yaml" | "yml" => {
-            FileType { label: "CONF", icon: "", color: Color::Rgb(230, 180, 80) }
+            FileType { label: "CF", icon: "", color: Color::Rgb(230, 180, 80) }
         }
         "md" => FileType { label: "MD", icon: "", color: Color::Rgb(240, 240, 240) },
-        "html" => FileType { label: "HTML", icon: "", color: Color::Rgb(220, 100, 80) },
-        "css" | "scss" => FileType { label: "CSS", icon: "", color: Color::Rgb(80, 150, 230) },
+        "html" => FileType { label: "HT", icon: "", color: Color::Rgb(220, 100, 80) },
+        "css" | "scss" => FileType { label: "CS", icon: "", color: Color::Rgb(80, 150, 230) },
         "js" | "ts" | "jsx" | "tsx" => {
             FileType { label: "JS", icon: "", color: Color::Rgb(230, 210, 80) }
         }
-        _ => FileType { label: "FILE", icon: "", color: Color::Rgb(180, 180, 180) },
+        _ => FileType { label: "FI", icon: "", color: Color::Rgb(180, 180, 180) },
     }
 }
 
@@ -91,13 +91,15 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
             .style(ratatui::style::Style::default().bg(Palette::BG_DARK)),
         f.area(),
     );
+
+    // Compact layout: header(1) + stats(1) + main(min) + logs(3) + footer(1)
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Title/Header
-            Constraint::Length(3), // Stats
-            Constraint::Min(10),   // Main content (FileList + DiffView)
-            Constraint::Length(5), // Logs
+            Constraint::Length(1), // Header
+            Constraint::Length(1), // Stats bar
+            Constraint::Min(8),    // Main (FileList + DiffView)
+            Constraint::Length(3), // Logs
             Constraint::Length(1), // Footer
         ])
         .split(f.area());
@@ -107,18 +109,16 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
     ui_state.header_rect = chunks[0];
     ui_state.logs_rect = chunks[3];
 
-    // 1. Draw Header
     header::HeaderComponent.draw(f, chunks[0], ui_state, domain);
-
-    // 2. Draw Stats
     stats::StatsComponent.draw(f, chunks[1], ui_state, domain);
 
-    // 3. Draw Main area (File List + Diff View)
+    // Main area: sidebar file list + diff preview
+    let file_list_pct = ui_state.file_list_width_pct.clamp(25, 45); // cap sidebar width
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(ui_state.file_list_width_pct),
-            Constraint::Percentage(100 - ui_state.file_list_width_pct),
+            Constraint::Percentage(file_list_pct),
+            Constraint::Percentage(100 - file_list_pct),
         ])
         .split(chunks[2]);
 
@@ -127,14 +127,10 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
 
     file_list::FileListComponent.draw(f, main_chunks[0], ui_state, domain);
     diff_view::DiffComponent.draw(f, main_chunks[1], ui_state, domain);
-
-    // 4. Draw Logs
     logs::LogsComponent.draw(f, chunks[3], ui_state, domain);
-
-    // 5. Draw Footer
     footer::FooterComponent.draw(f, chunks[4], ui_state, domain);
 
-    // 6. Draw Popups if active
+    // Popups on top
     if ui_state.editor_visible {
         popups::PopupComponent::CodeEditor.draw(f, f.area(), ui_state, domain);
     } else if ui_state.menu_visible {

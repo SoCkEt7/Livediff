@@ -1,10 +1,10 @@
-// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
+// Copyright (c) 2026 Nyxia. All rights reserved.
 
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Modifier, Style},
-    text::Line,
+    style::{Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
 };
 
@@ -20,17 +20,19 @@ impl Component for LogsComponent {
     fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut Self::State, _ctx: &Self::Context) {
         let text: Vec<Line<'_>> = state.logs.iter().map(|l| Line::from(l.as_str())).collect();
 
-        let title_line = Line::from(vec![Span::styled(
-            " ◈ ACTIVITY LOG ",
-            Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
-        )]);
+        let title_parts = vec![
+            Span::styled(" ◈ ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::styled(
+                "LOG",
+                Style::default().fg(Palette::TEXT_BRIGHT).add_modifier(Modifier::BOLD),
+            ),
+        ];
 
         let p = Paragraph::new(text)
             .block(
                 Block::default()
-                    .title(title_line)
+                    .title(Line::from(title_parts))
                     .borders(Borders::ALL)
-                    .border_type(ratatui::widgets::BorderType::Rounded)
                     .border_style(Style::default().fg(Palette::BORDER_DARK)),
             )
             .wrap(Wrap { trim: false });
@@ -38,5 +40,6 @@ impl Component for LogsComponent {
         f.render_widget(p, area);
     }
 }
-// Import Span for our title_line mapping
-use ratatui::text::Span;
+
+//use ratatui::text::Span;
+use ratatui::style::Color;

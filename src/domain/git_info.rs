@@ -119,10 +119,7 @@ impl GitInfo {
         let mut map = HashMap::new();
 
         // Porcelain v1: XY <file>
-        let output = Command::new("git")
-            .args(["status", "--porcelain"])
-            .current_dir(root)
-            .output();
+        let output = Command::new("git").args(["status", "--porcelain"]).current_dir(root).output();
 
         if let Ok(o) = output {
             if o.status.success() {
@@ -173,13 +170,9 @@ impl GitInfo {
             return Some(*status);
         }
         // Try matching by path suffix (for relative vs absolute)
-        self.file_statuses.iter().find_map(|(k, v)| {
-            if k.ends_with(path) || path.ends_with(k) {
-                Some(*v)
-            } else {
-                None
-            }
-        })
+        self.file_statuses
+            .iter()
+            .find_map(|(k, v)| if k.ends_with(path) || path.ends_with(k) { Some(*v) } else { None })
     }
 }
 
@@ -195,7 +188,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
 
         // Init git repo
-        Command::new("git").args(["init"]).current_dir(&dir).output().unwrap();
+        Command::new("git").args(["init", "-b", "main"]).current_dir(&dir).output().unwrap();
         Command::new("git")
             .args(["config", "user.email", "test@test.com"])
             .current_dir(&dir)
@@ -210,11 +203,7 @@ mod tests {
         // Create and commit a file
         std::fs::write(dir.join("test.txt"), "hello").unwrap();
         Command::new("git").args(["add", "."]).current_dir(&dir).output().unwrap();
-        Command::new("git")
-            .args(["commit", "-m", "initial"])
-            .current_dir(&dir)
-            .output()
-            .unwrap();
+        Command::new("git").args(["commit", "-m", "initial"]).current_dir(&dir).output().unwrap();
 
         // Modify
         std::fs::write(dir.join("test.txt"), "world").unwrap();
