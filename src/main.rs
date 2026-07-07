@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
     let mut terminal = init_terminal()?;
 
     // MPSC Channel for combining TUI events (Key, Mouse, Tick, Watcher)
-    let (event_tx, mut event_rx) = mpsc::channel(100);
+    let (event_tx, mut event_rx) = mpsc::channel(4096);
 
     // Spawn Watcher
     let watcher_config = adapters::watcher::WatcherConfig {
@@ -176,6 +176,7 @@ async fn main() -> Result<()> {
                 ui_state.update_ram_usage();
                 ui_state.update_event_history(domain.events_count);
                 ui_state.update_notifications();
+                let _ = terminal.draw(|f| adapters::ui::draw(f, &mut ui_state, &domain));
             }
             Event::Mouse(mouse) => {
                 if ui_state.editor_visible {
@@ -518,6 +519,18 @@ async fn main() -> Result<()> {
                         _ => {}
                     }
                 }
+            }
+            Event::Resize(_width, _height) => {
+                let _ = terminal.draw(|f| adapters::ui::draw(f, &mut ui_state, &domain));
+            }
+            Event::FocusGained => {
+                ui_state.add_log("Focus gained".to_string());
+            }
+            Event::FocusLost => {
+                ui_state.add_log("Focus lost".to_string());
+            }
+            Event::Paste(text) => {
+                ui_state.add_log(format!("Pasted {} characters", text.len()));
             }
             Event::Key(code, modifiers) => {
                 // Quit conditions: Ctrl+C (always)

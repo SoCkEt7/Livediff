@@ -19,6 +19,10 @@ pub enum Event {
     Log(String),
     Key(crossterm::event::KeyCode, crossterm::event::KeyModifiers),
     Mouse(crossterm::event::MouseEvent),
+    Resize(u16, u16),
+    FocusGained,
+    FocusLost,
+    Paste(String),
     Tick,
 }
 
