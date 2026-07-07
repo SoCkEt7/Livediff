@@ -205,6 +205,8 @@ pub struct TerminalUiState {
     pub editor_has_changes: bool,
     pub overlay_state: OverlayState,
     pub save_overlay_state: OverlayState,
+    pub git_info: crate::domain::git_info::GitInfo,
+    pub git_info_error: String,
 }
 
 impl Default for TerminalUiState {
@@ -214,6 +216,16 @@ impl Default for TerminalUiState {
 }
 
 impl TerminalUiState {
+    pub fn update_git_info(&mut self, root: &std::path::Path) {
+        let info = crate::domain::git_info::GitInfo::refresh(root);
+        if info.is_git_repo && !info.branch.is_empty() {
+            self.git_info = info;
+            self.git_info_error.clear();
+        } else if !info.is_git_repo {
+            self.git_info_error = "Not a git repository".to_string();
+        }
+    }
+
     pub fn new() -> Self {
         Self {
             selected_index: 0,
@@ -263,6 +275,8 @@ impl TerminalUiState {
             editor_has_changes: false,
             overlay_state: OverlayState::new(),
             save_overlay_state: OverlayState::new(),
+            git_info: crate::domain::git_info::GitInfo::default(),
+            git_info_error: String::new(),
         }
     }
 

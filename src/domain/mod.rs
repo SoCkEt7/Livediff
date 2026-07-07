@@ -6,3 +6,4 @@ pub mod ignore_engine;
 pub mod interfaces;
 pub mod value_objects;
 pub mod watcher_session;
+pub mod git_info;

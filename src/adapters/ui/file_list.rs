@@ -94,6 +94,22 @@ impl Component for FileListComponent {
                     ));
                 }
 
+                                // Git status badge
+                if state.git_info.is_git_repo {
+                    let git_status = state.git_info.get_status_for(&m.path);
+                    let (badge, badge_color) = match git_status {
+                        Some(crate::domain::git_info::GitFileStatus::Staged) => ("●", Color::Rgb(52, 152, 219)),
+                        Some(crate::domain::git_info::GitFileStatus::Modified) => ("●", Color::Rgb(230, 126, 34)),
+                        Some(crate::domain::git_info::GitFileStatus::Untracked) => ("○", Color::Rgb(231, 76, 60)),
+                        Some(crate::domain::git_info::GitFileStatus::Deleted) => ("✕", Color::Rgb(231, 76, 60)),
+                        Some(crate::domain::git_info::GitFileStatus::Renamed) => ("◎", Color::Rgb(155, 89, 182)),
+                        Some(crate::domain::git_info::GitFileStatus::Clean) | None => (" ", Palette::TEXT_MUTED),
+                    };
+                    line_spans.push(Span::styled(
+                        format!(" {} ", badge),
+                        Style::default().fg(badge_color).add_modifier(Modifier::BOLD),
+                    ));
+                }
                 line_spans.push(Span::raw(&m.path));
                 ListItem::new(Line::from(line_spans))
             })
