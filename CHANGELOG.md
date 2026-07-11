@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-07-11
+
+### Added
+- **Git Integration**: Direct Git integration within the TUI interface.
+
+### Changed
+- Rebranded copyright and UI elements to Nyxia.
+- Updated all dependencies to latest compatible versions via `cargo update`, including `regex v1.13.0`, `ignore v0.4.28`, `rust-embed v8.12.0`, `bytes v1.12.1`, and 22 other indirect dependency bumps.
+- Aligned `Cargo.toml` version with the established release sequence (3.x track).
+
+### Fixed
+- Fixed UI freeze on native Linux systems (specifically Fedora).
+- Resolved `Cargo.toml` version drift (reported `0.2.5` while the published crate was `3.1.0`).
+
 ## [0.2.5] - 2026-06-14
 
 ### Changed
