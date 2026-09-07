@@ -30,3 +30,7 @@ templates.cpp
 # Local runtime artifacts
 .omc/
 .playwright-mcp/
+
+# Tooling stubs (internal only — do not track in subdirectories)
+**/AGENTS.md
+!AGENTS.md
