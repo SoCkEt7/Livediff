@@ -29,6 +29,13 @@ Livediff does not replace Git. It complements `git diff` by turning file changes
 
 ## Quick start
 
+### Homebrew (macOS & Linux)
+```bash
+brew install socket7/tap/livediff
+livediff .
+```
+
+### Cargo (crates.io)
 ```bash
 cargo install livediff
 livediff .
