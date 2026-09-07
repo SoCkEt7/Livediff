@@ -73,7 +73,7 @@ impl IgnoreEngine {
         }
 
         let mut ignore_builder = GitignoreBuilder::new(root_path);
-        let mut ignore_names = vec![".ignore", ".rgignore"];
+        let mut ignore_names = vec![".livediffignore", ".ignore", ".rgignore"];
         if !self.no_ignore_vcs {
             ignore_names.push(".gitignore");
         }
@@ -196,5 +196,23 @@ mod tests {
 
         let kept = tmp.path().join("kept.txt");
         assert!(!engine.is_ignored(&kept, Path::new("kept.txt"), false));
+    }
+
+    #[test]
+    fn test_livediffignore_file_is_respected() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(".livediffignore"), "*.secret\ncustom_build/\n").unwrap();
+
+        let mut engine = IgnoreEngine::new(false, false, false, false, &[]);
+        engine.load_vcs_ignores(tmp.path());
+
+        let secret = tmp.path().join("keys.secret");
+        assert!(engine.is_ignored(&secret, Path::new("keys.secret"), false));
+
+        let inside_dir = tmp.path().join("custom_build/out.bin");
+        assert!(engine.is_ignored(&inside_dir, Path::new("custom_build/out.bin"), false));
+
+        let public_file = tmp.path().join("main.rs");
+        assert!(!engine.is_ignored(&public_file, Path::new("main.rs"), false));
     }
 }

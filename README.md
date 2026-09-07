@@ -66,7 +66,7 @@ It simulates the TUI, file changes, and real-time diff animations before you ins
 - **Ignore whitespace toggle** — ignore indentation and formatting variations on the fly (`w`).
 - **Character-level diffing** — precise syntax-highlighted token changes using `similar`.
 - **Low idle footprint** — event-driven redraws; no Electron or Node runtime.
-- **Smart ignore engine** — respects `.gitignore` and accepts custom glob ignore patterns.
+- **Smart ignore engine** — respects `.gitignore`, `.livediffignore`, and accepts custom glob ignore patterns.
 - **Embedded code editor** — press `e` to quickly tweak files in-place without leaving your terminal.
 
 ## Keyboard Shortcuts
@@ -87,7 +87,7 @@ It simulates the TUI, file changes, and real-time diff animations before you ins
 | `PgUp` / `PgDn` | Scroll diff preview vertically |
 | `i` | Open ignore rules menu |
 | `c` | Clear tracked changes history and logs |
-| `r` | Reload `.gitignore` and configuration files |
+| `r` | Reload `.gitignore`, `.livediffignore`, and configuration files |
 | `+` / `-` | Increase / decrease UI update speed |
 | `?` | Toggle help overlay |
 | `q` | Quit Livediff |
@@ -133,15 +133,19 @@ Arguments:
   [PATH]  The path to monitor [default: .]
 
 Options:
-  -i, --ignore <IGNORE>      Ignore files matching this glob pattern (can be used multiple times)
-      --show-hidden          Show hidden files
-      --no-ignore            Do not respect ignore files (.gitignore, .ignore, etc.)
-      --no-ignore-parent     Do not respect ignore files in parent directories
-      --no-ignore-vcs        Do not respect git/VCS ignore files (.gitignore, etc.)
-  -s, --split                Start in Side-by-Side (Split) diff view mode
-  -w, --ignore-whitespace    Start with whitespace changes ignored in diffs
-  -h, --help                 Print help
-  -V, --version              Print version
+  -i, --ignore <IGNORE>                  Ignore files matching this glob pattern (can be used multiple times)
+      --show-hidden                      Show hidden files
+      --no-ignore                        Do not respect ignore files (.gitignore, .livediffignore, etc.)
+      --no-ignore-parent                 Do not respect ignore files in parent directories
+      --no-ignore-vcs                    Do not respect git/VCS ignore files (.gitignore, etc.)
+  -s, --split                            Start in Side-by-Side (Split) diff view mode
+  -w, --ignore-whitespace                Start with whitespace changes ignored in diffs
+  -W, --wrap-lines                       Start with soft line-wrapping enabled
+      --theme <THEME>                    Initial color theme palette [possible values: cyberpunk, catppuccin, tokyo-night, nord, gruvbox]
+      --debounce-ms <DEBOUNCE_MS>        Filesystem debounce window in milliseconds [default: 25]
+      --generate-completions <SHELL>     Generate shell completions for the specified shell and exit [possible values: bash, elvish, fish, powershell, zsh]
+  -h, --help                             Print help
+  -V, --version                          Print version
 ```
 
 ## Contributing

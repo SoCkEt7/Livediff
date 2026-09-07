@@ -28,6 +28,14 @@ async fn main() -> Result<()> {
     // 2. Parse CLI arguments
     let cli = adapters::cli::Cli::parse();
 
+    // Handle completions generation early
+    if let Some(shell) = cli.generate_completions {
+        use clap::CommandFactory;
+        let mut cmd = adapters::cli::Cli::command();
+        clap_complete::generate(shell, &mut cmd, "livediff", &mut std::io::stdout());
+        return Ok(());
+    }
+
     // 3. Initialize background logging
     infrastructure::logging::init_logging()?;
 
@@ -49,11 +57,18 @@ async fn main() -> Result<()> {
 
     let mut domain = app::MonitorDomain::new(ignore_engine_arc.clone());
     let mut ui_state = app::TerminalUiState::from_config(&user_config);
+    if let Some(theme) = cli.theme {
+        let setting: domain::config::ThemeSetting = theme.into();
+        ui_state.current_theme = setting.into();
+    }
     if cli.split {
         ui_state.view_mode = app::DiffViewMode::Split;
     }
     if cli.ignore_whitespace {
         ui_state.ignore_whitespace = true;
+    }
+    if cli.wrap_lines {
+        ui_state.wrap_lines = true;
     }
     let process_file_change = use_cases::process_file_change::ProcessFileChangeUseCase::new();
 
@@ -70,10 +85,14 @@ async fn main() -> Result<()> {
     // MPSC Channel for combining TUI events (Key, Mouse, Tick, Watcher)
     let (event_tx, mut event_rx) = mpsc::channel(4096);
 
+    let debounce_ms = if cli.debounce_ms != 25 { cli.debounce_ms } else { user_config.debounce_ms };
+    ui_state.debounce_ms = debounce_ms;
+
     // Spawn Watcher
     let watcher_config = adapters::watcher::WatcherConfig {
         root_path: cli.path.clone(),
         max_size: 1024 * 1024,
+        debounce_ms,
         ignore_engine: ignore_engine_arc.clone(),
     };
 

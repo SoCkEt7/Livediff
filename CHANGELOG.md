@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.3.0] - 2026-09-07
 
 ### Added
-- **Dynamic Multi-Palette Themes**: Instant runtime switching (`t` / `T`) between Cyberpunk, Catppuccin Mocha, Tokyo Night, Nord, and Gruvbox Dark.
+- **Dynamic Multi-Palette Themes**: Instant runtime switching (`t` / `T`) and CLI flag `--theme <palette>` between Cyberpunk, Catppuccin Mocha, Tokyo Night, Nord, and Gruvbox Dark.
 - **Direct Clipboard Patch Yank**: Fast one-key copy (`y` / `Y`) of unified git patch directly into system clipboard via `YankDiffUseCase`.
-- **Soft-Wrap Diff View Toggle**: Toggle text wrapping for long diff lines (`W`) with visual `[WRAP]` status indicator in both Unified and Side-by-Side Split views.
+- **Soft-Wrap Diff View Toggle**: Toggle text wrapping for long diff lines (`W` / `--wrap-lines`) with visual `[WRAP]` status indicator in both Unified and Side-by-Side Split views.
+- **Shell Completions Generator**: First-class shell completions for Bash, Zsh, Fish, Elvish, and PowerShell via `--generate-completions <shell>` (`clap_complete`).
+- **Dedicated `.livediffignore` Support**: Built-in support for project-level `.livediffignore` files alongside standard `.gitignore` and `.ignore`.
+- **Configurable Debounce Window**: Custom filesystem debounce window via `--debounce-ms <ms>` and persistent configuration.
 - **Visual Add/Del Ratio Distribution Gauge**: Graphical balance bar `[████░░░░]` dynamically rendered in the stats bar.
 - **Side-by-Side (Split) Diff View**: Toggle between Unified and Split diff panes (`v` or `Tab`) with synchronized line scrolling and dual gutters.
 - **Interactive File Filtering**: Live substring search filter activated via `/` with real-time matching indicators.

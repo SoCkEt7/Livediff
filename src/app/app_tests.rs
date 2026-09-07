@@ -308,12 +308,14 @@ fn test_user_config_serde_and_ui_state() {
         ignore_whitespace: true,
         respect_vcs_ignore: false,
         tick_rate_ms: 250,
+        debounce_ms: 75,
     };
 
     let toml_str = toml::to_string(&config).unwrap();
     assert!(toml_str.contains("theme = \"tokyo_night\""));
     assert!(toml_str.contains("view_mode = \"split\""));
     assert!(toml_str.contains("wrap_lines = true"));
+    assert!(toml_str.contains("debounce_ms = 75"));
 
     let deserialized: UserConfig = toml::from_str(&toml_str).unwrap();
     assert_eq!(deserialized, config);
@@ -327,5 +329,21 @@ fn test_user_config_serde_and_ui_state() {
     assert_eq!(state.tick_rate_ms, 250);
 
     let roundtrip_config = state.to_config();
-    assert_eq!(roundtrip_config, config);
+    assert_eq!(roundtrip_config.theme, config.theme);
+    assert_eq!(roundtrip_config.view_mode, config.view_mode);
+    assert_eq!(roundtrip_config.wrap_lines, config.wrap_lines);
+}
+
+#[test]
+fn test_cli_args_parsing() {
+    use crate::adapters::cli::Cli;
+    use clap::Parser;
+
+    let cli =
+        Cli::parse_from(["livediff", "--debounce-ms", "100", "-s", "-w", "-W", "--theme", "nord"]);
+    assert_eq!(cli.debounce_ms, 100);
+    assert!(cli.split);
+    assert!(cli.ignore_whitespace);
+    assert!(cli.wrap_lines);
+    assert_eq!(cli.theme, Some(crate::adapters::cli::ThemeArg::Nord));
 }

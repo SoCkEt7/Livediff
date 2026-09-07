@@ -250,6 +250,7 @@ pub struct TerminalUiState {
     pub git_info_error: String,
     pub current_theme: crate::adapters::ui::theme::ThemeKind,
     pub wrap_lines: bool,
+    pub debounce_ms: u64,
 }
 
 impl Default for TerminalUiState {
@@ -310,6 +311,7 @@ impl TerminalUiState {
             last_selected_timestamp: None,
             ram_usage: "0 KB".to_string(),
             tick_rate_ms: 500,
+            debounce_ms: 25,
             event_history: vec![0; 40],
             last_events_count: 0,
             ignore_cursor_idx: 0,
@@ -339,6 +341,7 @@ impl TerminalUiState {
         state.ignore_whitespace = config.ignore_whitespace;
         state.respect_vcs_ignore = config.respect_vcs_ignore;
         state.tick_rate_ms = config.tick_rate_ms;
+        state.debounce_ms = config.debounce_ms;
         state
     }
 
@@ -350,6 +353,7 @@ impl TerminalUiState {
             ignore_whitespace: self.ignore_whitespace,
             respect_vcs_ignore: self.respect_vcs_ignore,
             tick_rate_ms: self.tick_rate_ms,
+            debounce_ms: self.debounce_ms,
         }
     }
 

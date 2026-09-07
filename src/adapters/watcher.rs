@@ -11,6 +11,7 @@ use crate::domain::interfaces::FileSystemPort;
 pub struct WatcherConfig {
     pub root_path: PathBuf,
     pub max_size: u64,
+    pub debounce_ms: u64,
     pub ignore_engine:
         std::sync::Arc<std::sync::RwLock<crate::domain::ignore_engine::IgnoreEngine>>,
 }
@@ -179,9 +180,10 @@ impl FileMonitor {
             .await;
 
         while let Some(first_event) = notify_rx.recv().await {
-            // Debounce / batch burst modifications within 25ms
+            // Debounce / batch burst modifications
             let mut batch = vec![first_event];
-            tokio::time::sleep(tokio::time::Duration::from_millis(25)).await;
+            let debounce_dur = tokio::time::Duration::from_millis(self.config.debounce_ms);
+            tokio::time::sleep(debounce_dur).await;
             while let Ok(subsequent) = notify_rx.try_recv() {
                 batch.push(subsequent);
             }
