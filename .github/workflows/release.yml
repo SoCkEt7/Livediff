@@ -112,3 +112,80 @@ jobs:
           fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  update-homebrew-tap:
+    name: Update Homebrew Formula
+    needs: ['build-release']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Homebrew Tap
+        uses: actions/checkout@v7
+        with:
+          repository: 'SoCkEt7/homebrew-tap'
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Calculate Checksums and Update Formula
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          echo "Updating Formula/livediff.rb for version ${VERSION}..."
+
+          # Download release tarballs
+          gh release download "${TAG}" --repo SoCkEt7/Livediff -p "*.tar.gz" -D dist/
+
+          ARM_SHA=$(sha256sum "dist/livediff-${TAG}-aarch64-apple-darwin.tar.gz" | awk '{print $1}')
+          INTEL_SHA=$(sha256sum "dist/livediff-${TAG}-x86_64-apple-darwin.tar.gz" | awk '{print $1}')
+          LINUX_SHA=$(sha256sum "dist/livediff-${TAG}-x86_64-unknown-linux-musl.tar.gz" | awk '{print $1}')
+
+          cat << EOF > homebrew-tap/Formula/livediff.rb
+          class Livediff < Formula
+            desc "Watch file diffs live in your terminal. Minimalist Rust TUI companion to git diff"
+            homepage "https://socket7.github.io/Livediff/"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/SoCkEt7/Livediff/releases/download/${TAG}/livediff-${TAG}-aarch64-apple-darwin.tar.gz"
+                sha256 "${ARM_SHA}"
+              else
+                url "https://github.com/SoCkEt7/Livediff/releases/download/${TAG}/livediff-${TAG}-x86_64-apple-darwin.tar.gz"
+                sha256 "${INTEL_SHA}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.intel?
+                url "https://github.com/SoCkEt7/Livediff/releases/download/${TAG}/livediff-${TAG}-x86_64-unknown-linux-musl.tar.gz"
+                sha256 "${LINUX_SHA}"
+              end
+            end
+
+            def install
+              bin.install "livediff"
+            end
+
+            test do
+              system "#{bin}/livediff", "--version"
+            end
+          end
+          EOF
+
+          cd homebrew-tap
+          # Strip leading indentation from heredoc
+          sed -i 's/^          //' Formula/livediff.rb
+
+          git config user.name "SoCkEt7-bot"
+          git config user.email "antonin.niv@gmail.com"
+          git add Formula/livediff.rb
+
+          if git diff --staged --quiet; then
+            echo "No changes to Formula/livediff.rb"
+          else
+            git commit -m "feat(formula): update livediff to ${TAG}"
+            git push origin main
+            echo "Homebrew tap updated successfully!"
+          fi
