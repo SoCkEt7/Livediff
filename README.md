@@ -9,6 +9,7 @@
 [![CI](https://github.com/SoCkEt7/Livediff/actions/workflows/ci.yml/badge.svg)](https://github.com/SoCkEt7/Livediff/actions)
 [![Crates.io](https://img.shields.io/crates/v/livediff.svg)](https://crates.io/crates/livediff)
 [![License](https://img.shields.io/crates/l/livediff.svg)](https://github.com/SoCkEt7/Livediff/blob/main/LICENSE-MIT)
+[![Sponsor this project on GitHub](https://img.shields.io/badge/Sponsor-SoCkEt7-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/SoCkEt7)
 [![Author](https://img.shields.io/badge/Author-@SoCkEt7-00FF66.svg?logo=github&logoColor=black)](https://github.com/SoCkEt7)
 [![Followers](https://img.shields.io/github/followers/SoCkEt7?label=Follow%20@SoCkEt7&style=social)](https://github.com/SoCkEt7)
 
