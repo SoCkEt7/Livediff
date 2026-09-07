@@ -162,6 +162,24 @@ pub enum DiffViewMode {
     Split,
 }
 
+impl From<crate::domain::config::ViewModeSetting> for DiffViewMode {
+    fn from(setting: crate::domain::config::ViewModeSetting) -> Self {
+        match setting {
+            crate::domain::config::ViewModeSetting::Unified => DiffViewMode::Unified,
+            crate::domain::config::ViewModeSetting::Split => DiffViewMode::Split,
+        }
+    }
+}
+
+impl From<DiffViewMode> for crate::domain::config::ViewModeSetting {
+    fn from(mode: DiffViewMode) -> Self {
+        match mode {
+            DiffViewMode::Unified => crate::domain::config::ViewModeSetting::Unified,
+            DiffViewMode::Split => crate::domain::config::ViewModeSetting::Split,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct HighlightedSplitRow {
     pub old_lineno: Option<usize>,
@@ -310,6 +328,28 @@ impl TerminalUiState {
             git_info_error: String::new(),
             current_theme: crate::adapters::ui::theme::ThemeKind::Cyberpunk,
             wrap_lines: false,
+        }
+    }
+
+    pub fn from_config(config: &crate::domain::config::UserConfig) -> Self {
+        let mut state = Self::new();
+        state.current_theme = config.theme.into();
+        state.view_mode = config.view_mode.into();
+        state.wrap_lines = config.wrap_lines;
+        state.ignore_whitespace = config.ignore_whitespace;
+        state.respect_vcs_ignore = config.respect_vcs_ignore;
+        state.tick_rate_ms = config.tick_rate_ms;
+        state
+    }
+
+    pub fn to_config(&self) -> crate::domain::config::UserConfig {
+        crate::domain::config::UserConfig {
+            theme: self.current_theme.into(),
+            view_mode: self.view_mode.into(),
+            wrap_lines: self.wrap_lines,
+            ignore_whitespace: self.ignore_whitespace,
+            respect_vcs_ignore: self.respect_vcs_ignore,
+            tick_rate_ms: self.tick_rate_ms,
         }
     }
 

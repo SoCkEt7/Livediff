@@ -73,3 +73,27 @@ impl ThemeKind {
         }
     }
 }
+
+impl From<crate::domain::config::ThemeSetting> for ThemeKind {
+    fn from(setting: crate::domain::config::ThemeSetting) -> Self {
+        match setting {
+            crate::domain::config::ThemeSetting::Cyberpunk => ThemeKind::Cyberpunk,
+            crate::domain::config::ThemeSetting::Catppuccin => ThemeKind::Catppuccin,
+            crate::domain::config::ThemeSetting::TokyoNight => ThemeKind::TokyoNight,
+            crate::domain::config::ThemeSetting::Nord => ThemeKind::Nord,
+            crate::domain::config::ThemeSetting::Gruvbox => ThemeKind::Gruvbox,
+        }
+    }
+}
+
+impl From<ThemeKind> for crate::domain::config::ThemeSetting {
+    fn from(kind: ThemeKind) -> Self {
+        match kind {
+            ThemeKind::Cyberpunk => crate::domain::config::ThemeSetting::Cyberpunk,
+            ThemeKind::Catppuccin => crate::domain::config::ThemeSetting::Catppuccin,
+            ThemeKind::TokyoNight => crate::domain::config::ThemeSetting::TokyoNight,
+            ThemeKind::Nord => crate::domain::config::ThemeSetting::Nord,
+            ThemeKind::Gruvbox => crate::domain::config::ThemeSetting::Gruvbox,
+        }
+    }
+}

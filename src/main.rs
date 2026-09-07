@@ -44,10 +44,11 @@ async fn main() -> Result<()> {
     let canonical_path = cli.path.canonicalize().unwrap_or(cli.path.clone());
     let warnings = ignore_engine.load_vcs_ignores(&canonical_path);
 
+    let user_config = infrastructure::config::ConfigFileRepository::load_config();
     let ignore_engine_arc = std::sync::Arc::new(std::sync::RwLock::new(ignore_engine));
 
     let mut domain = app::MonitorDomain::new(ignore_engine_arc.clone());
-    let mut ui_state = app::TerminalUiState::new();
+    let mut ui_state = app::TerminalUiState::from_config(&user_config);
     if cli.split {
         ui_state.view_mode = app::DiffViewMode::Split;
     }
@@ -1008,6 +1009,9 @@ async fn main() -> Result<()> {
 
         terminal.draw(|f| adapters::ui::draw(f, &mut ui_state, &domain))?;
     }
+
+    // Persist user configuration (theme, view mode, preferences)
+    let _ = infrastructure::config::ConfigFileRepository::save_config(&ui_state.to_config());
 
     // Restore terminal
     restore_terminal()?;

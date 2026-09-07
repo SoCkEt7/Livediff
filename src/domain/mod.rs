@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Nyxia. All rights reserved.
 
+pub mod config;
 pub mod diff_engine;
 pub mod entities;
 pub mod git_info;

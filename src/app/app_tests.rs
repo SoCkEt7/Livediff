@@ -295,3 +295,37 @@ fn test_yank_diff_use_case_format() {
     assert!(patch.contains("-let x = 1;"));
     assert!(patch.contains("+let x = 2;"));
 }
+
+#[test]
+fn test_user_config_serde_and_ui_state() {
+    use crate::adapters::ui::theme::ThemeKind;
+    use crate::domain::config::{ThemeSetting, UserConfig, ViewModeSetting};
+
+    let config = UserConfig {
+        theme: ThemeSetting::TokyoNight,
+        view_mode: ViewModeSetting::Split,
+        wrap_lines: true,
+        ignore_whitespace: true,
+        respect_vcs_ignore: false,
+        tick_rate_ms: 250,
+    };
+
+    let toml_str = toml::to_string(&config).unwrap();
+    assert!(toml_str.contains("theme = \"tokyo_night\""));
+    assert!(toml_str.contains("view_mode = \"split\""));
+    assert!(toml_str.contains("wrap_lines = true"));
+
+    let deserialized: UserConfig = toml::from_str(&toml_str).unwrap();
+    assert_eq!(deserialized, config);
+
+    let state = TerminalUiState::from_config(&config);
+    assert_eq!(state.current_theme, ThemeKind::TokyoNight);
+    assert_eq!(state.view_mode, DiffViewMode::Split);
+    assert!(state.wrap_lines);
+    assert!(state.ignore_whitespace);
+    assert!(!state.respect_vcs_ignore);
+    assert_eq!(state.tick_rate_ms, 250);
+
+    let roundtrip_config = state.to_config();
+    assert_eq!(roundtrip_config, config);
+}
