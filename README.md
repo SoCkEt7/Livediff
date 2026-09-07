@@ -10,6 +10,7 @@
 [![Crates.io](https://img.shields.io/crates/v/livediff.svg)](https://crates.io/crates/livediff)
 [![License](https://img.shields.io/crates/l/livediff.svg)](https://github.com/SoCkEt7/Livediff/blob/main/LICENSE-MIT)
 [![Sponsor this project on GitHub](https://img.shields.io/badge/Sponsor-SoCkEt7-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/SoCkEt7)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-antoninnvh-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/antoninnvh)
 [![Author](https://img.shields.io/badge/Author-@SoCkEt7-00FF66.svg?logo=github&logoColor=black)](https://github.com/SoCkEt7)
 [![Followers](https://img.shields.io/github/followers/SoCkEt7?label=Follow%20@SoCkEt7&style=social)](https://github.com/SoCkEt7)
 
@@ -153,6 +154,7 @@ Livediff is built and maintained by **[Antonin Nivoche (@SoCkEt7)](https://githu
 
 - 🐙 **GitHub**: [Follow @SoCkEt7](https://github.com/SoCkEt7) for high-performance Rust tools, developer utilities, and sovereign infrastructure.
 - 🛡️ **Cybersecurity & Systems**: [Nyxia.fr](https://nyxia.fr) — Security audits, penetration testing, and infrastructure engineering.
+- ☕ **Support**: [Buy Me a Coffee (@antoninnvh)](https://www.buymeacoffee.com/antoninnvh) & [GitHub Sponsors](https://github.com/sponsors/SoCkEt7).
 - 💼 **Advisory & Executive Mandates**: [LinkedIn](https://www.linkedin.com/in/antonin-nvh/).
 
 ## License
