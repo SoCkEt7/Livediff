@@ -14,7 +14,7 @@
       {
         packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = "livediff";
-          version = "3.1.0";
+          version = "3.3.0";
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
 

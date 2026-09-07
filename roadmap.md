@@ -56,12 +56,12 @@ This document consolidates:
 
 ## 4. Strategic Product Roadmap
 
-```
- v0.1.x (Current)            v0.2.0 (Polish & Core)         v0.3.0 (Advanced TUI)           v1.0.0 (Production Stable)
- ─────────────────          ──────────────────────         ───────────────────────         ──────────────────────────
- • Crates.io release        • Homebrew / Binstall          • Split / Unified view modes    • Plugin / Hook Architecture
- • Basic TUI & notify       • Multi-thread notify engine   • Syntax theme engine           • LSP / Tree-sitter diffing
- • Funding & Auto-merge     • Custom ignore regex rules    • Fuzzy search & file filter    • Full cross-platform parity
+```text
+v0.1.x (Current)            v0.2.0 (Polish & Core)         v0.3.0 (Advanced TUI)           v1.0.0 (Production Stable)
+─────────────────          ──────────────────────         ───────────────────────         ──────────────────────────
+• Crates.io release        • Homebrew / Binstall          • Split / Unified view modes    • Plugin / Hook Architecture
+• Basic TUI & notify       • Multi-thread notify engine   • Syntax theme engine           • LSP / Tree-sitter diffing
+• Funding & Auto-merge     • Custom ignore regex rules    • Fuzzy search & file filter    • Full cross-platform parity
 ```
 
 ---
