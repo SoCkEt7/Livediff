@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-09-07
+
+### Added
+- **Dynamic Multi-Palette Themes**: Instant runtime switching (`t` / `T`) between Cyberpunk, Catppuccin Mocha, Tokyo Night, Nord, and Gruvbox Dark.
+- **Direct Clipboard Patch Yank**: Fast one-key copy (`y` / `Y`) of unified git patch directly into system clipboard via `YankDiffUseCase`.
+- **Soft-Wrap Diff View Toggle**: Toggle text wrapping for long diff lines (`W`) with visual `[WRAP]` status indicator in both Unified and Side-by-Side Split views.
+- **Visual Add/Del Ratio Distribution Gauge**: Graphical balance bar `[████░░░░]` dynamically rendered in the stats bar.
+- **Side-by-Side (Split) Diff View**: Toggle between Unified and Split diff panes (`v` or `Tab`) with synchronized line scrolling and dual gutters.
+- **Interactive File Filtering**: Live substring search filter activated via `/` with real-time matching indicators.
+- **One-Key Patch Snapshot Export**: Instant snapshot export of the current diff into a standard `.patch` file via `s` / `S`.
+- **Ignore Whitespace Toggle**: Dynamic toggle (`w`) and CLI flag `--ignore-whitespace` (`-w`) to ignore indentation and formatting variations.
+- **CLI View Mode Flag**: `--split` (`-s`) CLI option to launch directly in Side-by-Side diff view.
+- **Fast Navigation**: Top and bottom jumps (`g` / `G`) across file lists and diff buffers.
+- **Line Number Gutters**: Dual line number tracking (original and destination lines) with syntax highlighting.
+- **Adaptive Event Debouncing**: High-throughput file watcher with sub-50ms event debouncing and deduplication to eliminate TUI flicker during rapid batch writes.
+- **Super Clean Hexagonal Architecture**: Strict decoupling into pure domain entities/services, dedicated application use cases (`ExportPatchUseCase`, `YankDiffUseCase`, `ManageIgnoresUseCase`, `ProcessFileChangeUseCase`), isolated adapters, and infrastructure.
+
+### Changed
+- Updated crate dependencies: `similar 3.2.0`, `clap 4.6.6`, `tokio 1.53.1`, `ignore 0.4.33`, `globset 0.4.20`, `serde 1.0.229`, `tui-big-text 0.8.9`.
+- Enhanced footer status bar and help menu overlay with all new keybindings.
+
 ## [3.2.0] - 2026-07-11
 
 ### Added

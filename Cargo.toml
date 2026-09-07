@@ -1,6 +1,6 @@
 [package]
 name = "livediff"
-version = "3.2.0"
+version = "3.3.0"
 edition = "2024"
 authors = ["Antonin Nivoche <antonin.niv@gmail.com>"]
 description = "Real-time file monitoring with beautiful diff visualization in the terminal."
@@ -18,24 +18,25 @@ crossterm = "0.29.0"
 tui-shimmer = "0.1"
 ratatui-code-editor = "0.0.6"
 tui-overlay = "0.1.2"
-tui-big-text = "0.8.4"
+tui-big-text = "0.8.9"
+arboard = "3.4"
 
 # Async and File System
-tokio = { version = "1.49.0", features = ["full"] }
+tokio = { version = "1.53.1", features = ["full"] }
 notify = "8.2.0"
-globset = "0.4.18"
-ignore = "0.4.25"
+globset = "0.4.20"
+ignore = "0.4.33"
 
 # Diff and Parsing
 similar = "3.2.0"
-syntect = { version = "5.2.0", default-features = false, features = ["parsing", "default-syntaxes", "default-themes", "regex-fancy"] }
-chrono = "0.4.44"
+syntect = { version = "5.3.0", default-features = false, features = ["parsing", "default-syntaxes", "default-themes", "regex-fancy"] }
+chrono = "0.4.45"
 
 # CLI and Config
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.6.6", features = ["derive"] }
 directories = "5.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 
 # Error Handling and Logs
 color-eyre = "0.6"

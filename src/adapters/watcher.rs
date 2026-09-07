@@ -139,6 +139,8 @@ impl FileMonitor {
                         lines: vec![crate::domain::diff_engine::DiffLine {
                             change_type: crate::domain::diff_engine::LineChangeType::Context,
                             content: "(Binary file content hidden)".to_string(),
+                            old_lineno: None,
+                            new_lineno: None,
                         }],
                         added: 0,
                         deleted: 0,
@@ -176,47 +178,64 @@ impl FileMonitor {
             )))
             .await;
 
-        while let Some(event) = notify_rx.recv().await {
-            if matches!(event.kind, EventKind::Remove(_)) {
-                for path in event.paths {
-                    session.remove_file(&path);
-                    let relative_path = path.strip_prefix(&root_path).unwrap_or(&path);
-                    let path_str = relative_path.to_string_lossy().to_string();
+        while let Some(first_event) = notify_rx.recv().await {
+            // Debounce / batch burst modifications within 25ms
+            let mut batch = vec![first_event];
+            tokio::time::sleep(tokio::time::Duration::from_millis(25)).await;
+            while let Ok(subsequent) = notify_rx.try_recv() {
+                batch.push(subsequent);
+            }
+
+            let mut removed_paths = std::collections::HashSet::new();
+            let mut modified_paths = std::collections::HashSet::new();
+
+            for event in batch {
+                if matches!(event.kind, EventKind::Remove(_)) {
+                    for path in event.paths {
+                        removed_paths.insert(path);
+                    }
+                } else if matches!(
+                    event.kind,
+                    EventKind::Modify(_) | EventKind::Create(_) | EventKind::Any
+                ) {
+                    for path in event.paths {
+                        modified_paths.insert(path);
+                    }
+                }
+            }
+
+            for path in removed_paths {
+                session.remove_file(&path);
+                let relative_path = path.strip_prefix(&root_path).unwrap_or(&path);
+                let path_str = relative_path.to_string_lossy().to_string();
+                let _ = tx
+                    .send(Event::FileDeleted { path: path_str, total_files: session.file_count() })
+                    .await;
+            }
+
+            for path in modified_paths {
+                let canonical = tokio::fs::canonicalize(&path).await.unwrap_or(path.clone());
+                let relative_path = canonical.strip_prefix(&root_path).unwrap_or(&canonical);
+
+                let is_dir =
+                    tokio::fs::metadata(&canonical).await.map(|m| m.is_dir()).unwrap_or(false);
+                let is_ignored = if let Ok(engine) = self.config.ignore_engine.read() {
+                    engine.is_ignored(&canonical, relative_path, is_dir)
+                } else {
+                    false
+                };
+
+                if is_ignored {
+                    continue;
+                }
+
+                if let Some(modif) = session.process_raw_event(&canonical).await {
                     let _ = tx
-                        .send(Event::FileDeleted {
-                            path: path_str,
+                        .send(Event::FileChanged {
+                            modification: modif,
                             total_files: session.file_count(),
                         })
                         .await;
-                }
-            } else if matches!(
-                event.kind,
-                EventKind::Modify(_) | EventKind::Create(_) | EventKind::Any
-            ) {
-                for path in event.paths {
-                    let path = tokio::fs::canonicalize(&path).await.unwrap_or(path.clone());
-                    let relative_path = path.strip_prefix(&root_path).unwrap_or(&path);
-
-                    let is_dir =
-                        tokio::fs::metadata(&path).await.map(|m| m.is_dir()).unwrap_or(false);
-                    let is_ignored = if let Ok(engine) = self.config.ignore_engine.read() {
-                        engine.is_ignored(&path, relative_path, is_dir)
-                    } else {
-                        false
-                    };
-
-                    if is_ignored {
-                        continue;
-                    }
-
-                    if let Some(modif) = session.process_raw_event(&path).await {
-                        let _ = tx
-                            .send(Event::FileChanged {
-                                modification: modif,
-                                total_files: session.file_count(),
-                            })
-                            .await;
-                    }
                 }
             }
         }

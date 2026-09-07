@@ -48,6 +48,12 @@ async fn main() -> Result<()> {
 
     let mut domain = app::MonitorDomain::new(ignore_engine_arc.clone());
     let mut ui_state = app::TerminalUiState::new();
+    if cli.split {
+        ui_state.view_mode = app::DiffViewMode::Split;
+    }
+    if cli.ignore_whitespace {
+        ui_state.ignore_whitespace = true;
+    }
     let process_file_change = use_cases::process_file_change::ProcessFileChangeUseCase::new();
 
     for warning in warnings {
@@ -808,8 +814,26 @@ async fn main() -> Result<()> {
                         },
                         _ => {}
                     }
+                } else if ui_state.filter_active {
+                    match code {
+                        crossterm::event::KeyCode::Esc => {
+                            ui_state.filter_active = false;
+                        }
+                        crossterm::event::KeyCode::Enter => {
+                            ui_state.filter_active = false;
+                        }
+                        crossterm::event::KeyCode::Backspace => {
+                            ui_state.filter_input_backspace(&domain);
+                        }
+                        crossterm::event::KeyCode::Char(c) => {
+                            ui_state.filter_input_char(c, &domain);
+                        }
+                        _ => {}
+                    }
                 } else if ui_state.help_visible {
-                    if code == crossterm::event::KeyCode::Char('?') {
+                    if code == crossterm::event::KeyCode::Char('?')
+                        || code == crossterm::event::KeyCode::Esc
+                    {
                         ui_state.hide_all_popups();
                     }
                 } else {
@@ -819,6 +843,36 @@ async fn main() -> Result<()> {
                         }
                         crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
                             ui_state.select_next(&domain);
+                        }
+                        crossterm::event::KeyCode::Char('v') | crossterm::event::KeyCode::Tab => {
+                            ui_state.toggle_view_mode();
+                        }
+                        crossterm::event::KeyCode::Char('/') => {
+                            ui_state.filter_active = true;
+                        }
+                        crossterm::event::KeyCode::Char('y')
+                        | crossterm::event::KeyCode::Char('Y') => {
+                            let _ = ui_state.yank_current_patch(&domain);
+                        }
+                        crossterm::event::KeyCode::Char('t')
+                        | crossterm::event::KeyCode::Char('T') => {
+                            ui_state.cycle_theme();
+                        }
+                        crossterm::event::KeyCode::Char('s')
+                        | crossterm::event::KeyCode::Char('S') => {
+                            let _ = ui_state.export_current_patch(&domain, &canonical_path);
+                        }
+                        crossterm::event::KeyCode::Char('W') => {
+                            ui_state.toggle_wrap_lines();
+                        }
+                        crossterm::event::KeyCode::Char('w') => {
+                            ui_state.toggle_ignore_whitespace(&domain);
+                        }
+                        crossterm::event::KeyCode::Char('g') => {
+                            ui_state.jump_to_top(&domain);
+                        }
+                        crossterm::event::KeyCode::Char('G') => {
+                            ui_state.jump_to_bottom(&domain);
                         }
                         crossterm::event::KeyCode::PageUp => {
                             ui_state.scroll_up();
@@ -834,15 +888,6 @@ async fn main() -> Result<()> {
                         }
                         crossterm::event::KeyCode::Char('i') => {
                             ui_state.toggle_ignore_menu(&domain);
-                        }
-                        crossterm::event::KeyCode::Char('g')
-                        | crossterm::event::KeyCode::Char('G') => {
-                            ui_state.update_git_info(&canonical_path);
-                            ui_state.add_log(format!(
-                                "Git: {} ({})",
-                                ui_state.git_info.branch,
-                                if ui_state.git_info.dirty { "dirty" } else { "clean" }
-                            ));
                         }
                         crossterm::event::KeyCode::Char('c') => {
                             ui_state.clear_all(&mut domain);
@@ -893,11 +938,7 @@ async fn main() -> Result<()> {
                         }
                         crossterm::event::KeyCode::Char('e') => {
                             let selected_path = {
-                                let visible_mods: Vec<_> = domain
-                                    .modifications
-                                    .iter()
-                                    .filter(|m| !domain.is_ignored(&m.path))
-                                    .collect();
+                                let visible_mods = ui_state.get_visible_modifications(&domain);
                                 visible_mods.get(ui_state.selected_index).map(|m| m.path.clone())
                             };
                             if let Some(path) = selected_path {

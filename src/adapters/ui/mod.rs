@@ -14,6 +14,7 @@ pub mod header;
 pub mod logs;
 pub mod popups;
 pub mod stats;
+pub mod theme;
 
 use crate::app::{MonitorDomain, TerminalUiState};
 

@@ -57,21 +57,48 @@ It simulates the TUI, file changes, and real-time diff animations before you ins
 
 ## Features
 
-- **Real-time monitoring** — native OS filesystem events via `notify`.
-- **Interactive TUI** — terminal interface built with `ratatui` and `crossterm`.
-- **Character-level diffs** — precise added/removed highlights using `similar`.
+- **Real-time monitoring** — native OS filesystem events via `notify` with adaptive burst debouncing.
+- **Dual view modes** — toggle between **Unified** and **Side-by-Side (Split)** diff views (`v` or `Tab`).
+- **Interactive file filtering** — real-time substring search through modified files (`/`).
+- **One-key patch export** — save instant `.patch` snapshots directly to disk (`s`).
+- **Line number gutters** — synchronized original and destination line numbers (`old / new`).
+- **Ignore whitespace toggle** — ignore indentation and formatting variations on the fly (`w`).
+- **Character-level diffing** — precise syntax-highlighted token changes using `similar`.
 - **Low idle footprint** — event-driven redraws; no Electron or Node runtime.
-- **Smart filtering** — respects `.gitignore` and accepts custom glob ignores.
-- **Zero-install preview** — hosted interactive demo for quick evaluation.
+- **Smart ignore engine** — respects `.gitignore` and accepts custom glob ignore patterns.
+- **Embedded code editor** — press `e` to quickly tweak files in-place without leaving your terminal.
+
+## Keyboard Shortcuts
+
+| Key | Action |
+| --- | --- |
+| `↑` / `↓` or `k` / `j` | Select file in recent modifications |
+| `v` or `Tab` | Toggle **Unified** / **Side-by-Side (Split)** diff view |
+| `/` | Open interactive file search / filter prompt |
+| `y` | Yank / copy diff patch to system clipboard |
+| `s` | Export current diff snapshot as `.patch` file |
+| `t` | Cycle visual color theme (Cyberpunk, Catppuccin, Tokyo Night, Nord, Gruvbox) |
+| `W` | Toggle line soft-wrapping |
+| `w` | Toggle ignore whitespace in diff calculation |
+| `g` / `G` | Jump to top / bottom of files list |
+| `e` | Open selected file in built-in code editor |
+| `←` / `→` or `h` / `l` | Scroll diff preview horizontally |
+| `PgUp` / `PgDn` | Scroll diff preview vertically |
+| `i` | Open ignore rules menu |
+| `c` | Clear tracked changes history and logs |
+| `r` | Reload `.gitignore` and configuration files |
+| `+` / `-` | Increase / decrease UI update speed |
+| `?` | Toggle help overlay |
+| `q` | Quit Livediff |
 
 ## How is it different?
 
 | Tool | Best for | Livediff difference |
 | --- | --- | --- |
 | `git diff` | Reviewing changes after edits | Watches changes live as they happen |
-| `watch` + `diff` | Simple repeated shell checks | Gives an interactive TUI and file list |
-| GUI diff tools | Manual visual review | Stays lightweight and terminal-native |
-| file watcher logs | Knowing something changed | Shows exactly what changed |
+| `watch` + `diff` | Simple repeated shell checks | Gives an interactive TUI, split views & file list |
+| GUI diff tools | Manual visual review | Stays lightweight, fast & terminal-native |
+| file watcher logs | Knowing something changed | Shows exactly what changed in real time |
 
 ## Example workflows
 
@@ -90,12 +117,6 @@ See [docs/use-cases.md](docs/use-cases.md) for practical workflows:
 cargo install livediff
 ```
 
-### Homebrew (planned)
-
-Homebrew is not a live install channel yet: no verified tap or formula is currently published for Livediff. Use Cargo (above) or a pre-built release archive until this section lists verified `brew` commands.
-
-See [#5](https://github.com/SoCkEt7/Livediff/issues/5) for the original packaging discussion.
-
 ### Pre-built binaries
 
 Tagged releases provide Linux, macOS, and Windows archives when available:
@@ -111,21 +132,16 @@ Arguments:
   [PATH]  The path to monitor [default: .]
 
 Options:
-  -i, --ignore <IGNORE>  Ignore files matching this glob pattern (can be used multiple times)
-      --show-hidden      Show hidden files
-      --no-ignore        Do not respect ignore files (.gitignore, .ignore, etc.)
-      --no-ignore-parent Do not respect ignore files in parent directories
-      --no-ignore-vcs    Do not respect git/VCS ignore files (.gitignore, etc.)
-  -h, --help             Print help
-  -V, --version          Print version
+  -i, --ignore <IGNORE>      Ignore files matching this glob pattern (can be used multiple times)
+      --show-hidden          Show hidden files
+      --no-ignore            Do not respect ignore files (.gitignore, .ignore, etc.)
+      --no-ignore-parent     Do not respect ignore files in parent directories
+      --no-ignore-vcs        Do not respect git/VCS ignore files (.gitignore, etc.)
+  -s, --split                Start in Side-by-Side (Split) diff view mode
+  -w, --ignore-whitespace    Start with whitespace changes ignored in diffs
+  -h, --help                 Print help
+  -V, --version              Print version
 ```
-
-## Roadmap
-
-- More packaged install options, including Homebrew.
-- Short terminal recording with asciinema.
-- More workflow recipes for generators, migrations, and monorepos.
-- Community-requested filters and export options.
 
 ## Contributing
 
@@ -133,13 +149,14 @@ Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), or ope
 
 ## ⚡ Author & Ecosystem
 
-Livediff is built and maintained by **[Antonin Nivoche (@SoCkEt7)](https://github.com/SoCkEt7)** — Fractional CTO & Offensive AI Security Architect.
+Livediff is built and maintained by **[Antonin Nivoche (@SoCkEt7)](https://github.com/SoCkEt7)** — Fractional CTO & Systems Architect.
 
-- 🐙 **GitHub**: [Follow @SoCkEt7](https://github.com/SoCkEt7) for high-performance Rust tools, offensive AI security systems, and sovereign infrastructure.
-- 🛡️ **Cybersecurity & AI Defense**: [Nyxia.fr](https://nyxia.fr) — Penetration testing, wireless audits, and LLM red-teaming.
+- 🐙 **GitHub**: [Follow @SoCkEt7](https://github.com/SoCkEt7) for high-performance Rust tools, developer utilities, and sovereign infrastructure.
+- 🛡️ **Cybersecurity & Systems**: [Nyxia.fr](https://nyxia.fr) — Security audits, penetration testing, and infrastructure engineering.
 - 💼 **Advisory & Executive Mandates**: [LinkedIn](https://www.linkedin.com/in/antonin-nvh/).
 
 ## License
 
 Licensed under either [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
+
 

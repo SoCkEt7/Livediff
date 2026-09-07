@@ -2,10 +2,10 @@
 
 use ratatui::{
     Frame,
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 
 use super::{Component, Palette, get_file_type};
@@ -19,10 +19,10 @@ impl Component for FileListComponent {
 
     fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut Self::State, ctx: &Self::Context) {
         let now = std::time::SystemTime::now();
-        let items: Vec<ListItem<'_>> = ctx
-            .modifications
+        let visible_mods = state.get_visible_modifications(ctx);
+
+        let items: Vec<ListItem<'_>> = visible_mods
             .iter()
-            .filter(|m| !ctx.is_ignored(&m.path))
             .enumerate()
             .map(|(i, m)| {
                 let elapsed =
@@ -102,34 +102,105 @@ impl Component for FileListComponent {
 
         let border_color = Palette::BORDER_FOCUS;
 
+        let total_count = ctx.modifications.iter().filter(|m| !ctx.is_ignored(&m.path)).count();
+        let filtered_count = visible_mods.len();
+
+        let count_str = if state.filter_query.is_empty() {
+            format!("  {} ", total_count)
+        } else {
+            format!("  {}/{} ", filtered_count, total_count)
+        };
+
         let title_parts = vec![
             Span::styled(" ◈ ", Style::default().fg(Palette::PRIMARY)),
             Span::styled(
                 "FILES",
                 Style::default().fg(Palette::TEXT_BRIGHT).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(
-                format!(
-                    "  {} ",
-                    ctx.modifications.iter().filter(|m| !ctx.is_ignored(&m.path)).count()
-                ),
-                Style::default().fg(Palette::TEXT_MUTED),
-            ),
+            Span::styled(count_str, Style::default().fg(Palette::TEXT_MUTED)),
+            if state.filter_active {
+                Span::styled(
+                    " [FILTER] ",
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                )
+            } else {
+                Span::raw("")
+            },
         ];
 
-        let list = List::new(items)
-            .block(
-                Block::default()
-                    .title(Line::from(title_parts))
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(border_color)),
-            )
-            .highlight_style(
-                Style::default().bg(Color::Rgb(30, 30, 50)).add_modifier(Modifier::BOLD),
-            );
+        let show_filter_bar = state.filter_active || !state.filter_query.is_empty();
 
-        let mut list_state = ListState::default();
-        list_state.select(Some(state.selected_index));
-        f.render_stateful_widget(list, area, &mut list_state);
+        if show_filter_bar && area.height > 6 {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(3), Constraint::Length(3)])
+                .split(area);
+
+            let list = List::new(items)
+                .block(
+                    Block::default()
+                        .title(Line::from(title_parts))
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(border_color)),
+                )
+                .highlight_style(
+                    Style::default().bg(Color::Rgb(30, 30, 50)).add_modifier(Modifier::BOLD),
+                );
+
+            let mut list_state = ListState::default();
+            list_state.select(Some(state.selected_index));
+            f.render_stateful_widget(list, chunks[0], &mut list_state);
+
+            // Filter bar
+            let filter_border =
+                if state.filter_active { Palette::ACCENT } else { Palette::BORDER_DARK };
+
+            let filter_spans = vec![
+                Span::styled(
+                    " / ",
+                    Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(&state.filter_query, Style::default().fg(Palette::TEXT_BRIGHT)),
+                if state.filter_active {
+                    Span::styled(
+                        "█",
+                        Style::default().fg(Color::Yellow).add_modifier(Modifier::RAPID_BLINK),
+                    )
+                } else {
+                    Span::raw("")
+                },
+                Span::raw(" "),
+                Span::styled(
+                    if state.filter_active { "(ESC/Enter to confirm)" } else { "(/ to edit)" },
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ];
+
+            let filter_paragraph = Paragraph::new(Line::from(filter_spans)).block(
+                Block::default()
+                    .title(Span::styled(
+                        " FILTER ",
+                        Style::default().fg(filter_border).add_modifier(Modifier::BOLD),
+                    ))
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(filter_border)),
+            );
+            f.render_widget(filter_paragraph, chunks[1]);
+        } else {
+            let list = List::new(items)
+                .block(
+                    Block::default()
+                        .title(Line::from(title_parts))
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(border_color)),
+                )
+                .highlight_style(
+                    Style::default().bg(Color::Rgb(30, 30, 50)).add_modifier(Modifier::BOLD),
+                );
+
+            let mut list_state = ListState::default();
+            list_state.select(Some(state.selected_index));
+            f.render_stateful_widget(list, area, &mut list_state);
+        }
     }
 }

@@ -30,4 +30,12 @@ pub struct Cli {
     /// Do not respect git/VCS ignore files (.gitignore, etc.)
     #[arg(long, default_value_t = false)]
     pub no_ignore_vcs: bool,
+
+    /// Start in Side-by-Side (Split) diff view mode
+    #[arg(short = 's', long, default_value_t = false)]
+    pub split: bool,
+
+    /// Start with whitespace changes ignored in diffs
+    #[arg(short = 'w', long, default_value_t = false)]
+    pub ignore_whitespace: bool,
 }

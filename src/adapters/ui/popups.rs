@@ -285,6 +285,38 @@ fn draw_help(f: &mut Frame<'_>, area: Rect) {
             Span::raw(" Select file in recent changes"),
         ]),
         Line::from(vec![
+            Span::styled("  v / Tab        ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Toggle Unified / Side-by-Side Split view"),
+        ]),
+        Line::from(vec![
+            Span::styled("  /              ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Interactive search / filter files"),
+        ]),
+        Line::from(vec![
+            Span::styled("  y / Y          ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Yank / copy diff patch to system clipboard"),
+        ]),
+        Line::from(vec![
+            Span::styled("  s              ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Export snapshot as .patch file"),
+        ]),
+        Line::from(vec![
+            Span::styled("  t / T          ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Cycle color theme (Cyberpunk, Catppuccin, etc.)"),
+        ]),
+        Line::from(vec![
+            Span::styled("  W              ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Toggle diff text soft-wrapping"),
+        ]),
+        Line::from(vec![
+            Span::styled("  w              ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Toggle ignore whitespace in diff"),
+        ]),
+        Line::from(vec![
+            Span::styled("  g / G          ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Jump to top / bottom"),
+        ]),
+        Line::from(vec![
             Span::styled("  e              ", Style::default().fg(Color::Rgb(241, 196, 15))),
             Span::raw(" Open selected file in editor"),
         ]),
@@ -315,10 +347,6 @@ fn draw_help(f: &mut Frame<'_>, area: Rect) {
         Line::from(vec![
             Span::styled("  ?              ", Style::default().fg(Color::Rgb(241, 196, 15))),
             Span::raw(" Toggle help menu"),
-        ]),
-        Line::from(vec![
-            Span::styled("  G / g          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Refresh git branch / status info"),
         ]),
         Line::from(vec![
             Span::styled("  Q / q          ", Style::default().fg(Color::Rgb(241, 196, 15))),

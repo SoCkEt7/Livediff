@@ -57,6 +57,8 @@ impl<F: FileSystemPort> WatcherSession<F> {
                 lines: vec![crate::domain::diff_engine::DiffLine {
                     change_type: crate::domain::diff_engine::LineChangeType::Context,
                     content: "(Binary file content hidden)".to_string(),
+                    old_lineno: None,
+                    new_lineno: None,
                 }],
                 added: 0,
                 deleted: 0,

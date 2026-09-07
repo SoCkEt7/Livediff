@@ -3,7 +3,7 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::Paragraph,
 };
@@ -25,35 +25,52 @@ impl Component for StatsComponent {
         let deleted_ratio = (stats.lines_deleted as f32 / 500.0).min(1.0);
         let events_ratio = (ctx.events_count as f32 / 100.0).min(1.0);
 
-        // Compact single-line stats with inline sparkline
+        // Ratio gauge computation
+        let total_diff_lines = stats.lines_added + stats.lines_deleted;
+        let (add_blocks, del_blocks) = if total_diff_lines == 0 {
+            (5, 5)
+        } else {
+            let add_ratio = stats.lines_added as f32 / total_diff_lines as f32;
+            let add_count = (add_ratio * 10.0).round() as usize;
+            (add_count.min(10), (10usize.saturating_sub(add_count)))
+        };
+
+        let border_dark = state.current_theme.border_dark();
+        let primary_color = state.current_theme.primary();
+
+        // Compact single-line stats with inline sparkline and ratio gauge
         let mut spans = vec![
-            Span::styled("▎", Style::default().fg(Palette::BORDER_DARK)),
+            Span::styled("▎", Style::default().fg(border_dark)),
             Span::styled("  ", Style::default().fg(get_value_color(files_ratio))),
             Span::styled(
                 format!("{}", stats.modified),
                 Style::default().fg(get_value_color(files_ratio)).add_modifier(Modifier::BOLD),
             ),
             Span::styled(" files ", Style::default().fg(Palette::TEXT_MUTED)),
-            Span::styled("│", Style::default().fg(Palette::BORDER_DARK)),
-            Span::styled(" + ", Style::default().fg(get_value_color(added_ratio))),
+            Span::styled("│", Style::default().fg(border_dark)),
+            Span::styled(" +", Style::default().fg(get_value_color(added_ratio))),
             Span::styled(
                 format!("{}", stats.lines_added),
                 Style::default().fg(get_value_color(added_ratio)).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" │", Style::default().fg(Palette::BORDER_DARK)),
-            Span::styled(" – ", Style::default().fg(get_value_color(deleted_ratio))),
+            Span::styled(" / ", Style::default().fg(border_dark)),
+            Span::styled("-", Style::default().fg(get_value_color(deleted_ratio))),
             Span::styled(
                 format!("{}", stats.lines_deleted),
                 Style::default().fg(get_value_color(deleted_ratio)).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" │", Style::default().fg(Palette::BORDER_DARK)),
+            Span::styled(" [", Style::default().fg(border_dark)),
+            Span::styled("█".repeat(add_blocks), Style::default().fg(Color::Rgb(46, 204, 113))),
+            Span::styled("░".repeat(del_blocks), Style::default().fg(Color::Rgb(231, 76, 60))),
+            Span::styled("] ", Style::default().fg(border_dark)),
+            Span::styled("│", Style::default().fg(border_dark)),
             Span::styled(" ⚡ ", Style::default().fg(get_value_color(events_ratio))),
             Span::styled(
                 format!("{}", ctx.events_count),
                 Style::default().fg(get_value_color(events_ratio)).add_modifier(Modifier::BOLD),
             ),
             Span::styled(" events ", Style::default().fg(Palette::TEXT_MUTED)),
-            Span::styled("│", Style::default().fg(Palette::BORDER_DARK)),
+            Span::styled("│", Style::default().fg(border_dark)),
         ];
 
         // Inline sparkline
@@ -105,8 +122,8 @@ impl Component for StatsComponent {
             sparkline_str.push(char::from_u32(0x2800 + code).unwrap_or(' '));
         }
 
-        spans.push(Span::styled(sparkline_str, Style::default().fg(Palette::PRIMARY)));
-        spans.push(Span::styled(" ▎", Style::default().fg(Palette::BORDER_DARK)));
+        spans.push(Span::styled(sparkline_str, Style::default().fg(primary_color)));
+        spans.push(Span::styled(" ▎", Style::default().fg(border_dark)));
 
         let p = Paragraph::new(Line::from(spans));
         f.render_widget(p, area);

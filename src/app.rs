@@ -155,10 +155,32 @@ pub enum PopupKind {
     Settings,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DiffViewMode {
+    #[default]
+    Unified,
+    Split,
+}
+
+#[derive(Clone, Debug)]
+pub struct HighlightedSplitRow {
+    pub old_lineno: Option<usize>,
+    pub old_spans: Option<Vec<(ratatui::style::Style, String)>>,
+    pub old_change: Option<crate::domain::diff_engine::LineChangeType>,
+    pub new_lineno: Option<usize>,
+    pub new_spans: Option<Vec<(ratatui::style::Style, String)>>,
+    pub new_change: Option<crate::domain::diff_engine::LineChangeType>,
+}
+
 // The visual controller managing display coordinates, cursors, and menus
 pub struct TerminalUiState {
     pub selected_index: usize,
     pub diff_scroll: (u16, u16),
+    pub view_mode: DiffViewMode,
+    pub ignore_whitespace: bool,
+    pub filter_active: bool,
+    pub filter_query: String,
+    pub filter_cursor_idx: usize,
     pub help_visible: bool,
     pub ignore_menu_visible: bool,
     pub ignore_menu_selected: usize,
@@ -186,7 +208,8 @@ pub struct TerminalUiState {
     pub logs_rect: ratatui::layout::Rect,
     pub logs: VecDeque<String>,
     pub highlighted_diff:
-        Vec<(crate::domain::diff_engine::LineChangeType, Vec<(ratatui::style::Style, String)>)>,
+        Vec<(crate::domain::diff_engine::DiffLine, Vec<(ratatui::style::Style, String)>)>,
+    pub highlighted_split_diff: Vec<HighlightedSplitRow>,
     pub last_selected_path: Option<String>,
     pub last_selected_timestamp: Option<SystemTime>,
     pub ram_usage: String,
@@ -207,6 +230,8 @@ pub struct TerminalUiState {
     pub save_overlay_state: OverlayState,
     pub git_info: crate::domain::git_info::GitInfo,
     pub git_info_error: String,
+    pub current_theme: crate::adapters::ui::theme::ThemeKind,
+    pub wrap_lines: bool,
 }
 
 impl Default for TerminalUiState {
@@ -230,6 +255,11 @@ impl TerminalUiState {
         Self {
             selected_index: 0,
             diff_scroll: (0, 0),
+            view_mode: DiffViewMode::Unified,
+            ignore_whitespace: false,
+            filter_active: false,
+            filter_query: String::new(),
+            filter_cursor_idx: 0,
             help_visible: false,
             ignore_menu_visible: false,
             ignore_menu_selected: 0,
@@ -257,6 +287,7 @@ impl TerminalUiState {
             logs_rect: ratatui::layout::Rect::default(),
             logs: VecDeque::new(),
             highlighted_diff: Vec::new(),
+            highlighted_split_diff: Vec::new(),
             last_selected_path: None,
             last_selected_timestamp: None,
             ram_usage: "0 KB".to_string(),
@@ -277,6 +308,8 @@ impl TerminalUiState {
             save_overlay_state: OverlayState::new(),
             git_info: crate::domain::git_info::GitInfo::default(),
             git_info_error: String::new(),
+            current_theme: crate::adapters::ui::theme::ThemeKind::Cyberpunk,
+            wrap_lines: false,
         }
     }
 
@@ -388,10 +421,29 @@ impl TerminalUiState {
         }
     }
 
+    pub fn get_visible_modifications<'a>(
+        &self,
+        domain: &'a MonitorDomain,
+    ) -> Vec<&'a FileModification> {
+        domain
+            .modifications
+            .iter()
+            .filter(|m| {
+                if domain.is_ignored(&m.path) {
+                    return false;
+                }
+                if !self.filter_query.is_empty() {
+                    let query = self.filter_query.to_lowercase();
+                    return m.path.to_lowercase().contains(&query);
+                }
+                true
+            })
+            .collect()
+    }
+
     pub fn reset_diff_scroll_to_first_change(&mut self, domain: &MonitorDomain) {
         self.diff_scroll = (0, 0);
-        let visible_mods: Vec<_> =
-            domain.modifications.iter().filter(|m| !domain.is_ignored(&m.path)).collect();
+        let visible_mods = self.get_visible_modifications(domain);
         if let Some(m) = visible_mods.get(self.selected_index) {
             let first_change_idx = m.diff_lines.iter().position(|line| {
                 matches!(
@@ -407,8 +459,7 @@ impl TerminalUiState {
     }
 
     pub fn select_next(&mut self, domain: &MonitorDomain) {
-        let visible_count =
-            domain.modifications.iter().filter(|m| !domain.is_ignored(&m.path)).count();
+        let visible_count = self.get_visible_modifications(domain).len();
         if visible_count > 0 && self.selected_index < visible_count - 1 {
             self.selected_index += 1;
             self.reset_diff_scroll_to_first_change(domain);
@@ -422,13 +473,130 @@ impl TerminalUiState {
         }
     }
 
+    pub fn jump_to_top(&mut self, _domain: &MonitorDomain) {
+        self.selected_index = 0;
+        self.diff_scroll = (0, 0);
+    }
+
+    pub fn jump_to_bottom(&mut self, domain: &MonitorDomain) {
+        let visible = self.get_visible_modifications(domain);
+        if !visible.is_empty() {
+            self.selected_index = visible.len() - 1;
+            self.reset_diff_scroll_to_first_change(domain);
+        }
+    }
+
+    pub fn toggle_view_mode(&mut self) {
+        self.view_mode = match self.view_mode {
+            DiffViewMode::Unified => DiffViewMode::Split,
+            DiffViewMode::Split => DiffViewMode::Unified,
+        };
+        self.add_notification(
+            format!(
+                "View Mode: {}",
+                match self.view_mode {
+                    DiffViewMode::Unified => "Unified",
+                    DiffViewMode::Split => "Side-by-Side (Split)",
+                }
+            ),
+            ToastKind::Info,
+        );
+    }
+
+    pub fn toggle_ignore_whitespace(&mut self, domain: &MonitorDomain) {
+        self.ignore_whitespace = !self.ignore_whitespace;
+        self.last_selected_timestamp = None;
+        self.update_highlighting(domain);
+        self.add_notification(
+            format!("Ignore Whitespace: {}", if self.ignore_whitespace { "ON" } else { "OFF" }),
+            ToastKind::Info,
+        );
+    }
+
+    pub fn cycle_theme(&mut self) {
+        self.current_theme = self.current_theme.next();
+        self.add_notification(format!("Theme: {}", self.current_theme.name()), ToastKind::Info);
+    }
+
+    pub fn toggle_wrap_lines(&mut self) {
+        self.wrap_lines = !self.wrap_lines;
+        self.add_notification(
+            format!("Wrap Lines: {}", if self.wrap_lines { "ON" } else { "OFF" }),
+            ToastKind::Info,
+        );
+    }
+
+    pub fn yank_current_patch(&mut self, domain: &MonitorDomain) -> Result<usize, String> {
+        let visible = self.get_visible_modifications(domain);
+        let Some(m) = visible.get(self.selected_index) else {
+            return Err("No file selected".to_string());
+        };
+
+        let use_case = crate::use_cases::yank_diff::YankDiffUseCase::new();
+        match use_case.execute(m) {
+            Ok(bytes) => {
+                self.add_log(format!("Yanked patch for {} ({} bytes) to clipboard", m.path, bytes));
+                self.add_notification(format!("Copied patch ({} B)", bytes), ToastKind::Success);
+                Ok(bytes)
+            }
+            Err(e) => {
+                self.add_log(format!("Yank failed: {}", e));
+                self.add_notification(format!("Yank failed: {}", e), ToastKind::Error);
+                Err(e)
+            }
+        }
+    }
+
+    pub fn filter_input_char(&mut self, c: char, domain: &MonitorDomain) {
+        self.filter_query.insert(self.filter_cursor_idx, c);
+        self.filter_cursor_idx += 1;
+        self.selected_index = 0;
+        self.reset_diff_scroll_to_first_change(domain);
+    }
+
+    pub fn filter_input_backspace(&mut self, domain: &MonitorDomain) {
+        if self.filter_cursor_idx > 0 {
+            self.filter_cursor_idx -= 1;
+            self.filter_query.remove(self.filter_cursor_idx);
+            self.selected_index = 0;
+            self.reset_diff_scroll_to_first_change(domain);
+        }
+    }
+
+    pub fn filter_clear(&mut self, domain: &MonitorDomain) {
+        self.filter_query.clear();
+        self.filter_cursor_idx = 0;
+        self.filter_active = false;
+        self.selected_index = 0;
+        self.reset_diff_scroll_to_first_change(domain);
+    }
+
+    pub fn export_current_patch(
+        &mut self,
+        domain: &MonitorDomain,
+        canonical_path: &std::path::Path,
+    ) -> Result<std::path::PathBuf, String> {
+        let visible = self.get_visible_modifications(domain);
+        let Some(m) = visible.get(self.selected_index) else {
+            return Err("No file selected".to_string());
+        };
+
+        let use_case = crate::use_cases::export_patch::ExportPatchUseCase::new();
+        let patch_path = use_case.execute(m, canonical_path)?;
+        let patch_filename =
+            patch_path.file_name().and_then(|n| n.to_str()).unwrap_or("diff.patch");
+
+        self.add_log(format!("Exported patch to {}", patch_filename));
+        self.add_notification(format!("Patch saved: {}", patch_filename), ToastKind::Success);
+        Ok(patch_path)
+    }
+
     pub fn toggle_ignore_menu(&mut self, domain: &MonitorDomain) {
         if self.ignore_menu_visible {
             self.hide_all_popups();
         } else {
             let path = {
-                let visible: Vec<_> =
-                    domain.modifications.iter().filter(|m| !domain.is_ignored(&m.path)).collect();
+                let visible = self.get_visible_modifications(domain);
                 visible.get(self.selected_index).map(|m| m.path.clone())
             };
             if let Some(p) = path {
@@ -480,19 +648,16 @@ impl TerminalUiState {
     pub fn remove_active_ignore(&mut self, domain: &MonitorDomain) {
         if self.active_ignores_visible && !self.active_ignores_list.is_empty() {
             let pattern = self.active_ignores_list[self.active_ignores_selected].clone();
-            if let Ok(mut engine) = domain.ignore_engine.write() {
-                engine.remove_ignore(&pattern);
-            }
+            let use_case = crate::use_cases::manage_ignores::ManageIgnoresUseCase::new();
+            use_case.remove_pattern(domain, &pattern);
             self.refresh_active_ignores(domain);
         }
     }
 
     pub fn clear_active_ignores(&mut self, domain: &MonitorDomain) {
         if self.active_ignores_visible {
-            if let Ok(mut engine) = domain.ignore_engine.write() {
-                engine.ignore_list.clear();
-                engine.rebuild_globset();
-            }
+            let use_case = crate::use_cases::manage_ignores::ManageIgnoresUseCase::new();
+            use_case.clear_custom_ignores(domain);
             self.refresh_active_ignores(domain);
         }
     }
@@ -552,15 +717,11 @@ impl TerminalUiState {
             let actual_insert =
                 if selected == "Ignore .*ignore files" { ".*ignore".to_string() } else { selected };
 
-            if let Ok(mut engine) = domain.ignore_engine.write() {
-                engine.add_ignore(actual_insert.clone());
-            }
-            domain.events.push_back(DomainEvent::IgnoreAdded { pattern: actual_insert });
+            let use_case = crate::use_cases::manage_ignores::ManageIgnoresUseCase::new();
+            use_case.add_pattern(domain, actual_insert);
             self.hide_all_popups();
 
-            // Adjust selected index
-            let visible_len =
-                domain.modifications.iter().filter(|m| !domain.is_ignored(&m.path)).count();
+            let visible_len = self.get_visible_modifications(domain).len();
             if self.selected_index > 0 && self.selected_index >= visible_len {
                 self.selected_index = visible_len.saturating_sub(1);
             }
@@ -596,15 +757,10 @@ impl TerminalUiState {
     pub fn ignore_input_apply(&mut self, domain: &mut MonitorDomain) {
         if self.ignore_input_visible {
             if !self.ignore_input_text.is_empty() {
-                if let Ok(mut engine) = domain.ignore_engine.write() {
-                    engine.add_ignore(self.ignore_input_text.clone());
-                }
-                domain.events.push_back(DomainEvent::IgnoreAdded {
-                    pattern: self.ignore_input_text.clone(),
-                });
+                let use_case = crate::use_cases::manage_ignores::ManageIgnoresUseCase::new();
+                use_case.add_pattern(domain, self.ignore_input_text.clone());
 
-                let visible_len =
-                    domain.modifications.iter().filter(|m| !domain.is_ignored(&m.path)).count();
+                let visible_len = self.get_visible_modifications(domain).len();
                 if self.selected_index > 0 && self.selected_index >= visible_len {
                     self.selected_index = visible_len.saturating_sub(1);
                 }
@@ -648,17 +804,15 @@ impl TerminalUiState {
     }
 
     pub fn update_highlighting(&mut self, domain: &MonitorDomain) {
-        let visible_mods: Vec<_> =
-            domain.modifications.iter().filter(|m| !domain.is_ignored(&m.path)).collect();
-
+        let visible_mods = self.get_visible_modifications(domain);
         let selected_mod = visible_mods.get(self.selected_index);
 
         let (should_update, mod_to_highlight) =
             match (selected_mod, &self.last_selected_path, self.last_selected_timestamp) {
                 (Some(m), Some(last_path), Some(last_ts)) => {
-                    (m.path != *last_path || m.timestamp != last_ts, Some(m))
+                    (m.path != *last_path || m.timestamp != last_ts, Some(*m))
                 }
-                (Some(m), _, _) => (true, Some(m)),
+                (Some(m), _, _) => (true, Some(*m)),
                 (None, _, _) => {
                     (self.last_selected_path.is_some() || !self.highlighted_diff.is_empty(), None)
                 }
@@ -669,6 +823,7 @@ impl TerminalUiState {
         }
 
         self.highlighted_diff.clear();
+        self.highlighted_split_diff.clear();
 
         let Some(m) = mod_to_highlight else {
             self.last_selected_path = None;
@@ -685,7 +840,6 @@ impl TerminalUiState {
 
         let path = std::path::Path::new(&m.path);
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-
         let is_toml = extension == "toml";
 
         let ss = get_syntax_set();
@@ -700,7 +854,7 @@ impl TerminalUiState {
             match line.change_type {
                 crate::domain::diff_engine::LineChangeType::Header => {
                     self.highlighted_diff.push((
-                        line.change_type.clone(),
+                        line.clone(),
                         vec![(ratatui::style::Style::default(), line.content.clone())],
                     ));
                 }
@@ -715,9 +869,48 @@ impl TerminalUiState {
                             .map(|(style, text)| (map_style(style), text.to_string()))
                             .collect()
                     };
-                    self.highlighted_diff.push((line.change_type.clone(), spans));
+                    self.highlighted_diff.push((line.clone(), spans));
                 }
             }
+        }
+
+        // Compute split diff rows
+        let diff_engine = crate::domain::diff_engine::DiffEngine::new();
+        let split_rows = diff_engine.compute_split_rows(&m.diff_lines);
+
+        for row in split_rows {
+            let old_spans = row.old_content.as_deref().map(|content| {
+                if is_toml {
+                    highlight_toml_line(content)
+                } else {
+                    let ranges = highlighter.highlight_line(content, ss).unwrap_or_default();
+                    ranges
+                        .into_iter()
+                        .map(|(style, text)| (map_style(style), text.to_string()))
+                        .collect()
+                }
+            });
+
+            let new_spans = row.new_content.as_deref().map(|content| {
+                if is_toml {
+                    highlight_toml_line(content)
+                } else {
+                    let ranges = highlighter.highlight_line(content, ss).unwrap_or_default();
+                    ranges
+                        .into_iter()
+                        .map(|(style, text)| (map_style(style), text.to_string()))
+                        .collect()
+                }
+            });
+
+            self.highlighted_split_diff.push(HighlightedSplitRow {
+                old_lineno: row.old_lineno,
+                old_spans,
+                old_change: row.old_change,
+                new_lineno: row.new_lineno,
+                new_spans,
+                new_change: row.new_change,
+            });
         }
     }
 }
