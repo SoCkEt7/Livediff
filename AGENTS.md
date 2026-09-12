@@ -71,3 +71,18 @@ See parent/child AGENTS.md files for adjacent layers and local responsibilities.
 Rust crate dependencies are declared in root `Cargo.toml`; GitHub automation depends on GitHub Actions; docs are static HTML/Markdown.
 
 <!-- MANUAL: Any manually added notes below this line are preserved on regeneration -->
+
+## Global User-Scope Rules & Context
+- **Architecture & Code** :
+  - Clean Architecture / DDD : `domain/` (0 dépendance, pure) -> `application/use_cases/` -> `infrastructure/adapters/`.
+  - Modifications chirurgicales uniquement. Ne jamais polluer les dépôts avec des fichiers temporaires ou non sollicités.
+  - Maintien strict de la compilation et des tests (`cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`).
+- **Communication & Format** :
+  - Français uniquement.
+  - Style ultra-concis, direct, sans blabla, sans politesse superflue, sans récapitulatif non demandé.
+  - Préférer systématiquement les faits vérifiés aux hypothèses.
+- **Outils & Exécution** :
+  - Privilégier les outils système rapides (`fd`, `rg`, `bat`, `eza`, `delta`, `lazygit`).
+  - **Git Push Policy** : Jamais de `git push` sans confirmation explicite préalable de l'utilisateur.
+  - **Documentation & Open Source** : Zéro mention d'IA / LLM dans la documentation publique, les commits ou les changelogs.
+

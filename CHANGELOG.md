@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-09-12
+
+### Added
+- **AST Semantic Symbol Header Enrichment**: Automatic multi-language AST/structural code outline parsing (`AstParserPort` / `SemanticSymbolAdapter`) enriching hunk headers with enclosing functions, structs, classes, methods, or modules (Rust, TS/JS, Python, Go, C/C++, TOML/JSON).
+- **Interactive In-Diff Regex / Text Search**: Real-time diff search bar (`Ctrl+F`) with match highlighting, live count badge `[i/N]`, and bi-directional navigation (`Enter`, `n`, `N`, `Shift+Enter`).
+- **File Symbol Outline Inspector**: Popup overlay (`o` / `O`) listing all declared symbols in the active file with instant line jumping (`Enter`).
+- **Clean Architecture Ports & Use Cases**: Pure domain `AstParserPort`, `DiffSearchEngine`, `EnrichDiffWithSymbolsUseCase`, and `SearchDiffUseCase`.
+
+## [3.3.1] - 2026-09-12
+
+### Added
+- **Interactive Hunk Navigation**: Direct navigation between diff hunks via `n` / `]` (next hunk) and `p` / `[` (previous hunk) with real-time HUD position indicator `Hunk [i/N]`.
+- **Smart Context Folding**: Toggle compact hunk view vs full-file context view on the fly (`f` / `F`) with visual `[FOLD]` status indicator.
+- **Dedicated `NavigateHunksUseCase`**: Application use case coordinating hunk index transitions and precise scroll offset calculations.
+
+### Fixed
+- **Ignore Engine Root Assert Panic**: Deeply fixed panic in `ignore::Gitignore` when checking absolute or external file paths outside the repository root.
+
 ## [3.3.0] - 2026-09-07
 
 ### Added

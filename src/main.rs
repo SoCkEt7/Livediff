@@ -850,6 +850,49 @@ async fn main() -> Result<()> {
                         }
                         _ => {}
                     }
+                } else if ui_state.symbol_inspector_visible {
+                    match code {
+                        crossterm::event::KeyCode::Up | crossterm::event::KeyCode::Char('k') => {
+                            ui_state.symbol_inspector_prev();
+                        }
+                        crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
+                            ui_state.symbol_inspector_next();
+                        }
+                        crossterm::event::KeyCode::Enter => {
+                            ui_state.symbol_inspector_jump_to_selected();
+                        }
+                        crossterm::event::KeyCode::Esc
+                        | crossterm::event::KeyCode::Char('o')
+                        | crossterm::event::KeyCode::Char('O') => {
+                            ui_state.hide_all_popups();
+                        }
+                        _ => {}
+                    }
+                } else if ui_state.diff_search_active {
+                    match code {
+                        crossterm::event::KeyCode::Esc => {
+                            ui_state.diff_search_active = false;
+                        }
+                        crossterm::event::KeyCode::Enter => {
+                            if modifiers.contains(crossterm::event::KeyModifiers::SHIFT) {
+                                ui_state.jump_prev_search_match();
+                            } else {
+                                ui_state.jump_next_search_match();
+                            }
+                        }
+                        crossterm::event::KeyCode::Backspace => {
+                            ui_state.diff_search_input_backspace(&domain);
+                        }
+                        crossterm::event::KeyCode::Char('f')
+                            if modifiers.contains(crossterm::event::KeyModifiers::CONTROL) =>
+                        {
+                            ui_state.jump_next_search_match();
+                        }
+                        crossterm::event::KeyCode::Char(c) => {
+                            ui_state.diff_search_input_char(c, &domain);
+                        }
+                        _ => {}
+                    }
                 } else if ui_state.help_visible {
                     if code == crossterm::event::KeyCode::Char('?')
                         || code == crossterm::event::KeyCode::Esc
@@ -858,6 +901,15 @@ async fn main() -> Result<()> {
                     }
                 } else {
                     match code {
+                        crossterm::event::KeyCode::Char('f')
+                            if modifiers.contains(crossterm::event::KeyModifiers::CONTROL) =>
+                        {
+                            ui_state.diff_search_active = true;
+                        }
+                        crossterm::event::KeyCode::Char('o')
+                        | crossterm::event::KeyCode::Char('O') => {
+                            ui_state.toggle_symbol_inspector();
+                        }
                         crossterm::event::KeyCode::Up | crossterm::event::KeyCode::Char('k') => {
                             ui_state.select_previous(&domain);
                         }
@@ -881,6 +933,30 @@ async fn main() -> Result<()> {
                         crossterm::event::KeyCode::Char('s')
                         | crossterm::event::KeyCode::Char('S') => {
                             let _ = ui_state.export_current_patch(&domain, &canonical_path);
+                        }
+                        crossterm::event::KeyCode::Char('n') => {
+                            if !ui_state.diff_search_query.is_empty() {
+                                ui_state.jump_next_search_match();
+                            } else {
+                                ui_state.jump_next_hunk();
+                            }
+                        }
+                        crossterm::event::KeyCode::Char('N') => {
+                            if !ui_state.diff_search_query.is_empty() {
+                                ui_state.jump_prev_search_match();
+                            } else {
+                                ui_state.jump_prev_hunk();
+                            }
+                        }
+                        crossterm::event::KeyCode::Char(']') => {
+                            ui_state.jump_next_hunk();
+                        }
+                        crossterm::event::KeyCode::Char('[') => {
+                            ui_state.jump_prev_hunk();
+                        }
+                        crossterm::event::KeyCode::Char('f')
+                        | crossterm::event::KeyCode::Char('F') => {
+                            ui_state.toggle_context_folding(&domain);
                         }
                         crossterm::event::KeyCode::Char('W') => {
                             ui_state.toggle_wrap_lines();

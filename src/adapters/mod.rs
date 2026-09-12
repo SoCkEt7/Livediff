@@ -2,5 +2,6 @@
 
 pub mod cli;
 pub mod fs_adapter;
+pub mod semantic_symbol_adapter;
 pub mod ui;
 pub mod watcher;

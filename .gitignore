@@ -1,3 +1,27 @@
 target/
 Cargo.lock
 *.log
+
+# AI / Agents & LLM config files
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+**/CLAUDE.md
+GEMINI.md
+**/GEMINI.md
+.gemini/
+.claude/
+.fastembed_cache/
+.internal/
+.omc/
+.omo/
+.codegraph
+.playwright-mcp/
+.qoder/
+
+# Local tapes and demo artifacts
+*.tape
+livediff_demo
+write_examples.sh
+deployment.yaml
+

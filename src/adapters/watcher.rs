@@ -109,6 +109,7 @@ impl FileMonitor {
         for path in paths {
             let old_content = session.get_cached(&path).unwrap_or_default();
             let max_size = self.config.max_size;
+            let root_for_item = root_path.clone();
 
             join_set.spawn(async move {
                 let fs = crate::adapters::fs_adapter::TokioFileSystem;
@@ -150,7 +151,11 @@ impl FileMonitor {
                     diff_engine.compute_diff(&old_content, &new_content)
                 };
 
-                let relative_path = path.to_string_lossy().to_string();
+                let relative_path = path
+                    .strip_prefix(&root_for_item)
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .to_string();
                 let modif = crate::domain::entities::FileModification {
                     path: relative_path,
                     timestamp: meta.modified,

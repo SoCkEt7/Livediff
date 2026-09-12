@@ -77,6 +77,31 @@ impl Component for DiffComponent {
         let accent_color = state.current_theme.accent();
         let border_focus = state.current_theme.border_focus();
 
+        let fold_badge = if state.context_folded { " [FOLD] " } else { "" };
+        let hunk_badge = if !state.hunks.is_empty() {
+            format!(" [Hunk {}/{}] ", state.current_hunk_idx + 1, state.hunks.len())
+        } else {
+            String::new()
+        };
+
+        let search_badge = if !state.diff_search_matches.is_empty() {
+            format!(
+                " [Match {}/{}] ",
+                state.diff_search_match_idx + 1,
+                state.diff_search_matches.len()
+            )
+        } else if !state.diff_search_query.is_empty() {
+            " [0 Matches] ".to_string()
+        } else {
+            String::new()
+        };
+
+        let symbols_count_badge = if !state.active_file_symbols.is_empty() {
+            format!(" [{} Syms (o)] ", state.active_file_symbols.len())
+        } else {
+            String::new()
+        };
+
         let title_parts = vec![
             Span::styled(" ◈ ", Style::default().fg(accent_color)),
             Span::styled(
@@ -87,6 +112,38 @@ impl Component for DiffComponent {
                 mode_badge,
                 Style::default().fg(primary_color).add_modifier(Modifier::BOLD),
             ),
+            if !hunk_badge.is_empty() {
+                Span::styled(
+                    hunk_badge,
+                    Style::default().fg(accent_color).add_modifier(Modifier::BOLD),
+                )
+            } else {
+                Span::raw("")
+            },
+            if !symbols_count_badge.is_empty() {
+                Span::styled(
+                    symbols_count_badge,
+                    Style::default().fg(Color::Rgb(52, 152, 219)).add_modifier(Modifier::BOLD),
+                )
+            } else {
+                Span::raw("")
+            },
+            if !search_badge.is_empty() {
+                Span::styled(
+                    search_badge,
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                )
+            } else {
+                Span::raw("")
+            },
+            if !fold_badge.is_empty() {
+                Span::styled(
+                    fold_badge,
+                    Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                )
+            } else {
+                Span::raw("")
+            },
             if !ws_badge.is_empty() {
                 Span::styled(
                     ws_badge,
@@ -128,21 +185,45 @@ impl Component for DiffComponent {
             .split(inner_area);
 
         // Header bar
-        let header_line = Line::from(vec![
-            Span::styled(
-                format!(" {} ", header_label),
-                Style::default().fg(Color::Rgb(10, 10, 15)).bg(header_bg),
-            ),
-            Span::raw(" "),
-            Span::styled(&m.path, Style::default().add_modifier(Modifier::BOLD).fg(primary_color)),
-            Span::raw("  ·  "),
-            Span::styled(size_str, Style::default().fg(Palette::TEXT_MUTED)),
-            Span::raw("  ·  "),
-            Span::styled(
-                chrono::DateTime::<chrono::Local>::from(m.timestamp).format("%H:%M:%S").to_string(),
-                Style::default().fg(Palette::TEXT_MUTED),
-            ),
-        ]);
+        let header_line = if state.diff_search_active {
+            Line::from(vec![
+                Span::styled(
+                    " SEARCH IN DIFF: ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" "),
+                Span::styled(
+                    &state.diff_search_query,
+                    Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("█", Style::default().fg(Color::Yellow)),
+                Span::raw("  (Enter/n: Next, N: Prev, Esc: Clear)"),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled(
+                    format!(" {} ", header_label),
+                    Style::default().fg(Color::Rgb(10, 10, 15)).bg(header_bg),
+                ),
+                Span::raw(" "),
+                Span::styled(
+                    &m.path,
+                    Style::default().add_modifier(Modifier::BOLD).fg(primary_color),
+                ),
+                Span::raw("  ·  "),
+                Span::styled(size_str, Style::default().fg(Palette::TEXT_MUTED)),
+                Span::raw("  ·  "),
+                Span::styled(
+                    chrono::DateTime::<chrono::Local>::from(m.timestamp)
+                        .format("%H:%M:%S")
+                        .to_string(),
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ])
+        };
         f.render_widget(Paragraph::new(header_line), vert_chunks[0]);
 
         if m.is_binary {

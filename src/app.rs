@@ -251,6 +251,17 @@ pub struct TerminalUiState {
     pub current_theme: crate::adapters::ui::theme::ThemeKind,
     pub wrap_lines: bool,
     pub debounce_ms: u64,
+    pub context_folded: bool,
+    pub current_hunk_idx: usize,
+    pub hunks: Vec<crate::domain::diff_engine::HunkRange>,
+    pub diff_search_active: bool,
+    pub diff_search_query: String,
+    pub diff_search_cursor_idx: usize,
+    pub diff_search_matches: Vec<crate::domain::diff_search::SearchOccurrence>,
+    pub diff_search_match_idx: usize,
+    pub symbol_inspector_visible: bool,
+    pub symbol_inspector_selected: usize,
+    pub active_file_symbols: Vec<crate::domain::interfaces::SymbolInfo>,
 }
 
 impl Default for TerminalUiState {
@@ -330,6 +341,17 @@ impl TerminalUiState {
             git_info_error: String::new(),
             current_theme: crate::adapters::ui::theme::ThemeKind::Cyberpunk,
             wrap_lines: false,
+            context_folded: false,
+            current_hunk_idx: 0,
+            hunks: Vec::new(),
+            diff_search_active: false,
+            diff_search_query: String::new(),
+            diff_search_cursor_idx: 0,
+            diff_search_matches: Vec::new(),
+            diff_search_match_idx: 0,
+            symbol_inspector_visible: false,
+            symbol_inspector_selected: 0,
+            active_file_symbols: Vec::new(),
         }
     }
 
@@ -401,6 +423,7 @@ impl TerminalUiState {
         self.active_ignores_visible = false;
         self.settings_visible = false;
         self.ignore_input_visible = false;
+        self.symbol_inspector_visible = false;
         self.editor_visible = false;
         self.editor_save_prompt = false;
         self.overlay_state.close();
@@ -570,6 +593,53 @@ impl TerminalUiState {
         );
     }
 
+    pub fn jump_next_hunk(&mut self) {
+        if self.hunks.is_empty() {
+            return;
+        }
+        let uc = crate::use_cases::navigate_hunks::NavigateHunksUseCase::new();
+        self.current_hunk_idx = uc.next_hunk_index(self.current_hunk_idx, self.hunks.len());
+        let offset =
+            uc.calculate_scroll_offset(self.current_hunk_idx, &self.hunks, self.context_folded);
+        self.diff_scroll.0 = offset as u16;
+        self.add_notification(
+            format!("Hunk [{}/{}]", self.current_hunk_idx + 1, self.hunks.len()),
+            ToastKind::Info,
+        );
+    }
+
+    pub fn jump_prev_hunk(&mut self) {
+        if self.hunks.is_empty() {
+            return;
+        }
+        let uc = crate::use_cases::navigate_hunks::NavigateHunksUseCase::new();
+        self.current_hunk_idx = uc.prev_hunk_index(self.current_hunk_idx, self.hunks.len());
+        let offset =
+            uc.calculate_scroll_offset(self.current_hunk_idx, &self.hunks, self.context_folded);
+        self.diff_scroll.0 = offset as u16;
+        self.add_notification(
+            format!("Hunk [{}/{}]", self.current_hunk_idx + 1, self.hunks.len()),
+            ToastKind::Info,
+        );
+    }
+
+    pub fn toggle_context_folding(&mut self, domain: &MonitorDomain) {
+        self.context_folded = !self.context_folded;
+        self.last_selected_timestamp = None;
+        self.update_highlighting(domain);
+        let uc = crate::use_cases::navigate_hunks::NavigateHunksUseCase::new();
+        let offset =
+            uc.calculate_scroll_offset(self.current_hunk_idx, &self.hunks, self.context_folded);
+        self.diff_scroll.0 = offset as u16;
+        self.add_notification(
+            format!(
+                "Context Fold: {}",
+                if self.context_folded { "ON (Compact)" } else { "OFF (Full)" }
+            ),
+            ToastKind::Info,
+        );
+    }
+
     pub fn yank_current_patch(&mut self, domain: &MonitorDomain) -> Result<usize, String> {
         let visible = self.get_visible_modifications(domain);
         let Some(m) = visible.get(self.selected_index) else {
@@ -613,6 +683,108 @@ impl TerminalUiState {
         self.filter_active = false;
         self.selected_index = 0;
         self.reset_diff_scroll_to_first_change(domain);
+    }
+
+    pub fn diff_search_input_char(&mut self, c: char, domain: &MonitorDomain) {
+        self.diff_search_query.insert(self.diff_search_cursor_idx, c);
+        self.diff_search_cursor_idx += 1;
+        self.last_selected_timestamp = None;
+        self.update_highlighting(domain);
+        if !self.diff_search_matches.is_empty() {
+            self.diff_search_match_idx = 0;
+            self.diff_scroll.0 = self.diff_search_matches[0].line_idx as u16;
+        }
+    }
+
+    pub fn diff_search_input_backspace(&mut self, domain: &MonitorDomain) {
+        if self.diff_search_cursor_idx > 0 {
+            self.diff_search_cursor_idx -= 1;
+            self.diff_search_query.remove(self.diff_search_cursor_idx);
+            self.last_selected_timestamp = None;
+            self.update_highlighting(domain);
+            if !self.diff_search_matches.is_empty() {
+                self.diff_search_match_idx = 0;
+                self.diff_scroll.0 = self.diff_search_matches[0].line_idx as u16;
+            }
+        }
+    }
+
+    pub fn diff_search_clear(&mut self, domain: &MonitorDomain) {
+        self.diff_search_query.clear();
+        self.diff_search_cursor_idx = 0;
+        self.diff_search_active = false;
+        self.diff_search_matches.clear();
+        self.diff_search_match_idx = 0;
+        self.last_selected_timestamp = None;
+        self.update_highlighting(domain);
+    }
+
+    pub fn jump_next_search_match(&mut self) {
+        if self.diff_search_matches.is_empty() {
+            return;
+        }
+        let uc = crate::use_cases::search_diff::SearchDiffUseCase::new();
+        self.diff_search_match_idx =
+            uc.next_match_index(self.diff_search_match_idx, self.diff_search_matches.len());
+        self.diff_scroll.0 = self.diff_search_matches[self.diff_search_match_idx].line_idx as u16;
+        self.add_notification(
+            format!(
+                "Match [{}/{}]",
+                self.diff_search_match_idx + 1,
+                self.diff_search_matches.len()
+            ),
+            ToastKind::Info,
+        );
+    }
+
+    pub fn jump_prev_search_match(&mut self) {
+        if self.diff_search_matches.is_empty() {
+            return;
+        }
+        let uc = crate::use_cases::search_diff::SearchDiffUseCase::new();
+        self.diff_search_match_idx =
+            uc.prev_match_index(self.diff_search_match_idx, self.diff_search_matches.len());
+        self.diff_scroll.0 = self.diff_search_matches[self.diff_search_match_idx].line_idx as u16;
+        self.add_notification(
+            format!(
+                "Match [{}/{}]",
+                self.diff_search_match_idx + 1,
+                self.diff_search_matches.len()
+            ),
+            ToastKind::Info,
+        );
+    }
+
+    pub fn toggle_symbol_inspector(&mut self) {
+        if self.symbol_inspector_visible {
+            self.hide_all_popups();
+        } else {
+            self.hide_all_popups();
+            self.symbol_inspector_visible = true;
+            self.symbol_inspector_selected = 0;
+            self.overlay_state.open();
+        }
+    }
+
+    pub fn symbol_inspector_next(&mut self) {
+        if !self.active_file_symbols.is_empty()
+            && self.symbol_inspector_selected < self.active_file_symbols.len() - 1
+        {
+            self.symbol_inspector_selected += 1;
+        }
+    }
+
+    pub fn symbol_inspector_prev(&mut self) {
+        if self.symbol_inspector_selected > 0 {
+            self.symbol_inspector_selected -= 1;
+        }
+    }
+
+    pub fn symbol_inspector_jump_to_selected(&mut self) {
+        if let Some(sym) = self.active_file_symbols.get(self.symbol_inspector_selected) {
+            self.diff_scroll.0 = sym.start_line.saturating_sub(1) as u16;
+            self.hide_all_popups();
+        }
     }
 
     pub fn export_current_patch(
@@ -892,9 +1064,41 @@ impl TerminalUiState {
 
         let ts = get_theme_set();
         let theme = &ts.themes["base16-ocean.dark"];
+        let diff_engine = crate::domain::diff_engine::DiffEngine::new();
+        self.hunks = diff_engine.detect_hunks(&m.diff_lines, 3);
+        if self.current_hunk_idx >= self.hunks.len() {
+            self.current_hunk_idx = 0;
+        }
+
+        // Enrich hunks with semantic AST symbols
+        let full_text =
+            m.diff_lines.iter().map(|l| l.content.as_str()).collect::<Vec<_>>().concat();
+        let parser = crate::adapters::semantic_symbol_adapter::SemanticSymbolAdapter::new();
+        let enrich_use_case = crate::use_cases::semantic_diff::EnrichDiffWithSymbolsUseCase::new();
+        self.active_file_symbols =
+            enrich_use_case.execute(&parser, &mut self.hunks, &full_text, extension);
+
+        let lines_to_render = if self.context_folded {
+            diff_engine.compute_folded_lines(&m.diff_lines, &self.hunks)
+        } else {
+            m.diff_lines.clone()
+        };
+
+        // Compute search matches if query is present
+        if !self.diff_search_query.is_empty() {
+            let search_uc = crate::use_cases::search_diff::SearchDiffUseCase::new();
+            self.diff_search_matches = search_uc.execute(&lines_to_render, &self.diff_search_query);
+            if self.diff_search_match_idx >= self.diff_search_matches.len() {
+                self.diff_search_match_idx = 0;
+            }
+        } else {
+            self.diff_search_matches.clear();
+            self.diff_search_match_idx = 0;
+        }
+
         let mut highlighter = HighlightLines::new(syntax, theme);
 
-        for line in &m.diff_lines {
+        for line in &lines_to_render {
             match line.change_type {
                 crate::domain::diff_engine::LineChangeType::Header => {
                     self.highlighted_diff.push((
@@ -919,8 +1123,7 @@ impl TerminalUiState {
         }
 
         // Compute split diff rows
-        let diff_engine = crate::domain::diff_engine::DiffEngine::new();
-        let split_rows = diff_engine.compute_split_rows(&m.diff_lines);
+        let split_rows = diff_engine.compute_split_rows(&lines_to_render);
 
         for row in split_rows {
             let old_spans = row.old_content.as_deref().map(|content| {

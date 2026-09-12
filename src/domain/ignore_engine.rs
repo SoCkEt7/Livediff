@@ -7,6 +7,7 @@ use std::path::Path;
 
 #[derive(Clone, Debug)]
 pub struct IgnoreEngine {
+    pub root_path: Option<std::path::PathBuf>,
     pub ignore_list: HashSet<String>,
     pub globset: GlobSet,
     pub gitignore: Gitignore,
@@ -27,6 +28,7 @@ impl IgnoreEngine {
         ignore_patterns: &[String],
     ) -> Self {
         let mut engine = Self {
+            root_path: None,
             ignore_list: HashSet::new(),
             globset: GlobSetBuilder::new().build().unwrap(),
             gitignore: GitignoreBuilder::new("").build().unwrap(),
@@ -68,19 +70,22 @@ impl IgnoreEngine {
 
     pub fn load_vcs_ignores(&mut self, root_path: &Path) -> Vec<String> {
         let mut warnings = Vec::new();
+        let canonical_root = root_path.canonicalize().unwrap_or_else(|_| root_path.to_path_buf());
+        self.root_path = Some(canonical_root.clone());
+
         if self.no_ignore || self.all {
             return warnings;
         }
 
-        let mut ignore_builder = GitignoreBuilder::new(root_path);
+        let mut ignore_builder = GitignoreBuilder::new(&canonical_root);
         let mut ignore_names = vec![".livediffignore", ".ignore", ".rgignore"];
         if !self.no_ignore_vcs {
             ignore_names.push(".gitignore");
         }
 
         let mut found_git = false;
-        for ancestor in root_path.ancestors() {
-            if self.no_ignore_parent && ancestor != root_path {
+        for ancestor in canonical_root.ancestors() {
+            if self.no_ignore_parent && ancestor != canonical_root.as_path() {
                 break;
             }
             for ignore_name in &ignore_names {
@@ -102,9 +107,9 @@ impl IgnoreEngine {
         }
 
         if !found_git {
-            let mut local_ignore_builder = GitignoreBuilder::new(root_path);
+            let mut local_ignore_builder = GitignoreBuilder::new(&canonical_root);
             for ignore_name in &ignore_names {
-                let local_ignore_path = root_path.join(ignore_name);
+                let local_ignore_path = canonical_root.join(ignore_name);
                 if local_ignore_path.exists() {
                     let _ = local_ignore_builder.add(&local_ignore_path);
                 }
@@ -151,10 +156,27 @@ impl IgnoreEngine {
 
         // 2. Check VCS ignore files (.gitignore, .ignore, etc.)
         if self.respect_vcs && !self.all {
-            match self.gitignore.matched_path_or_any_parents(relative_path, is_dir) {
-                ignore::Match::Ignore(_) => return true,
-                ignore::Match::None => {}
-                ignore::Match::Whitelist(_) => return false,
+            let target_rel = if let Some(root) = &self.root_path {
+                if let Ok(stripped) = relative_path.strip_prefix(root) {
+                    stripped
+                } else if let Ok(stripped) = path.strip_prefix(root) {
+                    stripped
+                } else {
+                    relative_path
+                }
+            } else {
+                relative_path
+            };
+
+            let clean_rel = target_rel.strip_prefix("./").unwrap_or(target_rel);
+            let clean_rel = clean_rel.strip_prefix("/").unwrap_or(clean_rel);
+
+            if !clean_rel.has_root() && !clean_rel.is_absolute() {
+                match self.gitignore.matched_path_or_any_parents(clean_rel, is_dir) {
+                    ignore::Match::Ignore(_) => return true,
+                    ignore::Match::None => {}
+                    ignore::Match::Whitelist(_) => return false,
+                }
             }
         }
 
@@ -214,5 +236,34 @@ mod tests {
 
         let public_file = tmp.path().join("main.rs");
         assert!(!engine.is_ignored(&public_file, Path::new("main.rs"), false));
+    }
+
+    #[test]
+    fn test_absolute_and_external_paths_do_not_panic() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "target/\n*.tmp\n").unwrap();
+
+        let mut engine = IgnoreEngine::new(false, false, false, false, &[]);
+        // Test before loading VCS ignores with absolute path
+        assert!(!engine.is_ignored(
+            Path::new("/tmp/outside.txt"),
+            Path::new("/tmp/outside.txt"),
+            false
+        ));
+
+        engine.load_vcs_ignores(tmp.path());
+
+        // Absolute path under root (should match target/)
+        let inside_target = tmp.path().join("target/debug/app");
+        assert!(engine.is_ignored(&inside_target, &inside_target, false));
+
+        // Absolute path outside root (must not panic)
+        let outside = Path::new("/etc/hosts");
+        assert!(!engine.is_ignored(outside, outside, false));
+
+        // Path with leading slash (must not panic)
+        let leading_slash = Path::new("/target/debug/app");
+        // Custom check without panic
+        let _ = engine.is_ignored(leading_slash, leading_slash, false);
     }
 }

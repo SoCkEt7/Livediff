@@ -347,3 +347,68 @@ fn test_cli_args_parsing() {
     assert!(cli.wrap_lines);
     assert_eq!(cli.theme, Some(crate::adapters::cli::ThemeArg::Nord));
 }
+
+#[test]
+fn test_hunk_navigation_and_folding_ui() {
+    let engine = Arc::new(RwLock::new(IgnoreEngine::new(false, false, false, false, &[])));
+    let mut domain = MonitorDomain::new(engine);
+
+    // Create a modification with 2 hunks
+    let mut diff_lines = Vec::new();
+    for i in 1..=20 {
+        if i == 3 {
+            diff_lines.push(crate::domain::diff_engine::DiffLine {
+                change_type: crate::domain::diff_engine::LineChangeType::Insert,
+                content: "added line 3\n".to_string(),
+                old_lineno: None,
+                new_lineno: Some(3),
+            });
+        } else if i == 17 {
+            diff_lines.push(crate::domain::diff_engine::DiffLine {
+                change_type: crate::domain::diff_engine::LineChangeType::Delete,
+                content: "deleted line 17\n".to_string(),
+                old_lineno: Some(17),
+                new_lineno: None,
+            });
+        } else {
+            diff_lines.push(crate::domain::diff_engine::DiffLine {
+                change_type: crate::domain::diff_engine::LineChangeType::Context,
+                content: format!("line {}\n", i),
+                old_lineno: Some(i),
+                new_lineno: Some(i),
+            });
+        }
+    }
+
+    let modif = FileModification {
+        path: "large_file.rs".to_string(),
+        timestamp: SystemTime::now(),
+        size: 500,
+        added: 1,
+        deleted: 1,
+        diff_lines,
+        is_binary: false,
+    };
+    domain.handle_file_changed(modif);
+
+    let mut state = TerminalUiState::new();
+    state.update_highlighting(&domain);
+
+    assert_eq!(state.hunks.len(), 2);
+    assert_eq!(state.current_hunk_idx, 0);
+
+    // Jump to next hunk
+    state.jump_next_hunk();
+    assert_eq!(state.current_hunk_idx, 1);
+    assert!(state.diff_scroll.0 > 0);
+
+    // Jump to previous hunk
+    state.jump_prev_hunk();
+    assert_eq!(state.current_hunk_idx, 0);
+
+    // Toggle context fold
+    assert!(!state.context_folded);
+    state.toggle_context_folding(&domain);
+    assert!(state.context_folded);
+    assert!(state.highlighted_diff.len() < 22); // Folded length is smaller
+}

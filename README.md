@@ -74,6 +74,8 @@ It simulates the TUI, file changes, and real-time diff animations before you ins
 | Key | Action |
 | --- | --- |
 | `↑` / `↓` or `k` / `j` | Select file in recent modifications |
+| `n` / `p` or `]` / `[` | Jump to next / previous diff hunk |
+| `f` | Toggle context folding (compact vs full file) |
 | `v` or `Tab` | Toggle **Unified** / **Side-by-Side (Split)** diff view |
 | `/` | Open interactive file search / filter prompt |
 | `y` | Yank / copy diff patch to system clipboard |

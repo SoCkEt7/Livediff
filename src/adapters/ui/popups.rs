@@ -20,6 +20,7 @@ pub enum PopupComponent {
     CodeEditor,
     ActiveIgnores,
     Settings,
+    SymbolInspector,
 }
 
 impl Component for PopupComponent {
@@ -35,6 +36,7 @@ impl Component for PopupComponent {
             PopupComponent::CodeEditor => (Constraint::Percentage(80), Constraint::Percentage(80)),
             PopupComponent::ActiveIgnores => (Constraint::Length(50), Constraint::Length(20)),
             PopupComponent::Settings => (Constraint::Length(45), Constraint::Length(12)),
+            PopupComponent::SymbolInspector => (Constraint::Length(60), Constraint::Length(22)),
         };
 
         let overlay = Overlay::new()
@@ -56,6 +58,7 @@ impl Component for PopupComponent {
                 PopupComponent::CodeEditor => draw_code_editor(f, popup_area, state),
                 PopupComponent::ActiveIgnores => draw_active_ignores(f, popup_area, state),
                 PopupComponent::Settings => draw_settings(f, popup_area, state),
+                PopupComponent::SymbolInspector => draw_symbol_inspector(f, popup_area, state),
             }
         }
 
@@ -293,6 +296,14 @@ fn draw_help(f: &mut Frame<'_>, area: Rect) {
             Span::raw(" Interactive search / filter files"),
         ]),
         Line::from(vec![
+            Span::styled("  Ctrl+F         ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Search text / regex inside current diff"),
+        ]),
+        Line::from(vec![
+            Span::styled("  o / O          ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Open AST symbol inspector (functions/classes)"),
+        ]),
+        Line::from(vec![
             Span::styled("  y / Y          ", Style::default().fg(Color::Rgb(241, 196, 15))),
             Span::raw(" Yank / copy diff patch to system clipboard"),
         ]),
@@ -303,6 +314,14 @@ fn draw_help(f: &mut Frame<'_>, area: Rect) {
         Line::from(vec![
             Span::styled("  t / T          ", Style::default().fg(Color::Rgb(241, 196, 15))),
             Span::raw(" Cycle color theme (Cyberpunk, Catppuccin, etc.)"),
+        ]),
+        Line::from(vec![
+            Span::styled("  n / p, ] / [   ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Jump to next / previous diff hunk"),
+        ]),
+        Line::from(vec![
+            Span::styled("  f / F          ", Style::default().fg(Color::Rgb(241, 196, 15))),
+            Span::raw(" Toggle context folding (compact vs full file)"),
         ]),
         Line::from(vec![
             Span::styled("  W              ", Style::default().fg(Color::Rgb(241, 196, 15))),
@@ -531,4 +550,73 @@ fn draw_code_editor(f: &mut Frame<'_>, area: Rect, state: &mut TerminalUiState) 
             f.render_widget(paragraph, inner_save_area);
         }
     }
+}
+
+fn draw_symbol_inspector(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {
+    if state.active_file_symbols.is_empty() {
+        let text = vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                "No AST symbols detected in this file.",
+                Style::default().fg(Palette::TEXT_MUTED),
+            )),
+            Line::from(""),
+            Line::from(Span::styled(
+                "Supported: Rust, Python, TS/JS, Go, C/C++, TOML/JSON",
+                Style::default().fg(Palette::TEXT_MUTED),
+            )),
+        ];
+        let p = Paragraph::new(text).alignment(ratatui::layout::Alignment::Center).block(
+            Block::default()
+                .title(Span::styled(
+                    " AST SYMBOL INSPECTOR (ESC: Close) ",
+                    Style::default().add_modifier(Modifier::BOLD).fg(Palette::PRIMARY),
+                ))
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Double)
+                .border_style(Style::default().fg(Palette::PRIMARY)),
+        );
+        f.render_widget(p, area);
+        return;
+    }
+
+    let items: Vec<_> = state
+        .active_file_symbols
+        .iter()
+        .enumerate()
+        .map(|(i, sym)| {
+            let style = if i == state.symbol_inspector_selected {
+                Style::default()
+                    .fg(Palette::TEXT_BRIGHT)
+                    .bg(Palette::PRIMARY)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Palette::TEXT_MUTED)
+            };
+            let line = Line::from(vec![
+                Span::styled(format!(" {:<8} ", sym.kind), Style::default().fg(Color::Yellow)),
+                Span::raw(format!("{:<28} ", sym.name)),
+                Span::styled(
+                    format!("L{}-L{}", sym.start_line, sym.end_line),
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]);
+            ListItem::new(line).style(style)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(
+            Block::default()
+                .title(Span::styled(
+                    " AST SYMBOLS (ENTER: Jump, ↑/↓: Select, ESC: Close) ",
+                    Style::default().add_modifier(Modifier::BOLD).fg(Palette::PRIMARY),
+                ))
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Double)
+                .border_style(Style::default().fg(Palette::PRIMARY)),
+        )
+        .style(Style::default().fg(Palette::TEXT_BRIGHT).bg(Palette::BG_DARK));
+
+    f.render_widget(list, area);
 }

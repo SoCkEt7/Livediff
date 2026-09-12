@@ -2,6 +2,7 @@
 
 pub mod config;
 pub mod diff_engine;
+pub mod diff_search;
 pub mod entities;
 pub mod git_info;
 pub mod ignore_engine;

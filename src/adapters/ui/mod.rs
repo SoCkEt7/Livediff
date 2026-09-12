@@ -136,12 +136,16 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
         popups::PopupComponent::CodeEditor.draw(f, f.area(), ui_state, domain);
     } else if ui_state.menu_visible {
         popups::PopupComponent::GeneralMenu.draw(f, f.area(), ui_state, domain);
+    } else if ui_state.symbol_inspector_visible {
+        popups::PopupComponent::SymbolInspector.draw(f, f.area(), ui_state, domain);
     } else if ui_state.active_ignores_visible {
         popups::PopupComponent::ActiveIgnores.draw(f, f.area(), ui_state, domain);
     } else if ui_state.ignore_input_visible {
         popups::PopupComponent::IgnoreInput.draw(f, f.area(), ui_state, domain);
     } else if ui_state.ignore_menu_visible {
         popups::PopupComponent::IgnoreMenu.draw(f, f.area(), ui_state, domain);
+    } else if ui_state.settings_visible {
+        popups::PopupComponent::Settings.draw(f, f.area(), ui_state, domain);
     } else if ui_state.help_visible {
         popups::PopupComponent::Help.draw(f, f.area(), ui_state, domain);
     }
