@@ -2,7 +2,7 @@ target/
 Cargo.lock
 *.log
 
-# AI / Agents & LLM config files
+# Local development & workspace metadata
 AGENTS.md
 **/AGENTS.md
 CLAUDE.md

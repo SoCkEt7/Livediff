@@ -19,8 +19,8 @@ jobs:
         run: |
           # Use cloc to estimate Linguist's view (approximate)
           # We want Rust to be > 90% typically for these lists
-          TOTAL_CODE=$(cloc . --exclude-dir=target,.git,.fastembed_cache,.omx,.internal,.claude --json | jq '.SUM.code')
-          RUST_CODE=$(cloc . --exclude-dir=target,.git,.fastembed_cache,.omx,.internal,.claude --json | jq '.Rust.code // 0')
+          TOTAL_CODE=$(cloc . --exclude-dir=target,.git,.fastembed_cache,.internal --json | jq '.SUM.code')
+          RUST_CODE=$(cloc . --exclude-dir=target,.git,.fastembed_cache,.internal --json | jq '.Rust.code // 0')
           PERCENTAGE=$(echo "scale=2; $RUST_CODE * 100 / $TOTAL_CODE" | bc)
           echo "Estimated Rust Percentage: $PERCENTAGE%"
           if (( $(echo "$PERCENTAGE < 90" | bc -l) )); then
