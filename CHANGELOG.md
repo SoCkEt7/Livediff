@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.4.0] - 2026-09-12
 
 ### Added
+- **Interactive Command Palette (`:`, `Ctrl+P`)**: Searchable fuzzy action menu for all application commands, shortcuts, and switches.
 - **AST Semantic Symbol Header Enrichment**: Automatic multi-language AST/structural code outline parsing (`AstParserPort` / `SemanticSymbolAdapter`) enriching hunk headers with enclosing functions, structs, classes, methods, or modules (Rust, TS/JS, Python, Go, C/C++, TOML/JSON).
 - **Interactive In-Diff Regex / Text Search**: Real-time diff search bar (`Ctrl+F`) with match highlighting, live count badge `[i/N]`, and bi-directional navigation (`Enter`, `n`, `N`, `Shift+Enter`).
 - **File Symbol Outline Inspector**: Popup overlay (`o` / `O`) listing all declared symbols in the active file with instant line jumping (`Enter`).
-- **Clean Architecture Ports & Use Cases**: Pure domain `AstParserPort`, `DiffSearchEngine`, `EnrichDiffWithSymbolsUseCase`, and `SearchDiffUseCase`.
+- **4-Tab Comprehensive Help Modal**: Multi-tab interactive reference (`?`) for Navigation, Diff & Hunks, Search & Symbols, Actions & Config.
+- **Fully Responsive & Adaptive TUI Layout**: Real-time responsive adaptation to terminal width and height, preserving permanent visibility across Header, Stats, File Explorer, Diff Preview, Logs, and Footer.
+- **Header Author Badge & Brand Attributions**: Integrated copyright badge and GitHub / LinkedIn links in the header status bar.
+- **Clean Architecture Ports & Use Cases**: Pure domain `AstParserPort`, `DiffSearchEngine`, `CommandPaletteEngine`, `EnrichDiffWithSymbolsUseCase`, and `SearchDiffUseCase`.
 
 ## [3.3.1] - 2026-09-12
 

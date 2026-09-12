@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Nyxia. All rights reserved.
+// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
 
 use ratatui::{
     Frame,
@@ -38,6 +38,8 @@ impl Component for StatsComponent {
         let border_dark = state.current_theme.border_dark();
         let primary_color = state.current_theme.primary();
 
+        let w = area.width;
+
         // Compact single-line stats with inline sparkline and ratio gauge
         let mut spans = vec![
             Span::styled("▎", Style::default().fg(border_dark)),
@@ -59,19 +61,31 @@ impl Component for StatsComponent {
                 format!("{}", stats.lines_deleted),
                 Style::default().fg(get_value_color(deleted_ratio)).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(" [", Style::default().fg(border_dark)),
-            Span::styled("█".repeat(add_blocks), Style::default().fg(Color::Rgb(46, 204, 113))),
-            Span::styled("░".repeat(del_blocks), Style::default().fg(Color::Rgb(231, 76, 60))),
-            Span::styled("] ", Style::default().fg(border_dark)),
-            Span::styled("│", Style::default().fg(border_dark)),
-            Span::styled(" ⚡ ", Style::default().fg(get_value_color(events_ratio))),
-            Span::styled(
+        ];
+
+        if w >= 70 {
+            spans.push(Span::styled(" [", Style::default().fg(border_dark)));
+            spans.push(Span::styled(
+                "█".repeat(add_blocks),
+                Style::default().fg(Color::Rgb(46, 204, 113)),
+            ));
+            spans.push(Span::styled(
+                "░".repeat(del_blocks),
+                Style::default().fg(Color::Rgb(231, 76, 60)),
+            ));
+            spans.push(Span::styled("] ", Style::default().fg(border_dark)));
+        }
+
+        if w >= 90 {
+            spans.push(Span::styled("│", Style::default().fg(border_dark)));
+            spans.push(Span::styled(" ⚡ ", Style::default().fg(get_value_color(events_ratio))));
+            spans.push(Span::styled(
                 format!("{}", ctx.events_count),
                 Style::default().fg(get_value_color(events_ratio)).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" events ", Style::default().fg(Palette::TEXT_MUTED)),
-            Span::styled("│", Style::default().fg(border_dark)),
-        ];
+            ));
+            spans.push(Span::styled(" events ", Style::default().fg(Palette::TEXT_MUTED)));
+            spans.push(Span::styled("│", Style::default().fg(border_dark)));
+        }
 
         // Inline sparkline
         let max_val = *state.event_history.iter().max().unwrap_or(&0);

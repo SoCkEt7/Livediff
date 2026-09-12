@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Nyxia. All rights reserved.
+// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
 
 use ratatui::{
     Frame,
@@ -104,64 +104,164 @@ impl Component for HeaderComponent {
         let ignore_count =
             if let Ok(engine) = ctx.ignore_engine.read() { engine.ignore_list.len() } else { 0 };
 
-        let right_content = Line::from(vec![
-            Span::styled("", Style::default().fg(Color::Rgb(55, 55, 75))),
-            Span::styled(
+        let w = area.width;
+        let mut right_spans = Vec::new();
+
+        if w >= 110 {
+            right_spans.push(Span::styled("", Style::default().fg(Color::Rgb(55, 55, 75))));
+            right_spans.push(Span::styled(
                 format!("  {} ", ram_str),
                 Style::default()
                     .fg(Color::Rgb(46, 204, 113))
                     .bg(Color::Rgb(55, 55, 75))
                     .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
+            ));
+            right_spans.push(Span::styled(
                 "",
                 Style::default().fg(Color::Rgb(40, 40, 55)).bg(Color::Rgb(55, 55, 75)),
-            ),
-            Span::styled(
+            ));
+            right_spans.push(Span::styled(
                 format!("  {} Files ", ctx.total_files),
                 Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(40, 40, 55)),
-            ),
-            Span::styled(
+            ));
+            right_spans.push(Span::styled(
                 "",
                 Style::default().fg(Color::Rgb(55, 55, 75)).bg(Color::Rgb(40, 40, 55)),
-            ),
-            Span::styled(
+            ));
+            right_spans.push(Span::styled(
                 format!(" {} Ignored ", ignore_count),
                 Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(55, 55, 75)),
-            ),
-            Span::styled(
+            ));
+            right_spans.push(Span::styled(
                 "",
                 Style::default().fg(Color::Rgb(40, 40, 55)).bg(Color::Rgb(55, 55, 75)),
-            ),
-            Span::styled(
+            ));
+            right_spans.push(Span::styled(
                 format!("  {}ms ", state.tick_rate_ms),
                 Style::default()
                     .fg(Palette::PRIMARY)
                     .bg(Color::Rgb(40, 40, 55))
                     .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("", Style::default().fg(Palette::BORDER_DARK).bg(Color::Rgb(40, 40, 55))),
-            Span::styled(
+            ));
+        } else if w >= 80 {
+            right_spans.push(Span::styled("", Style::default().fg(Color::Rgb(55, 55, 75))));
+            right_spans.push(Span::styled(
+                format!("  {} ", ram_str),
+                Style::default()
+                    .fg(Color::Rgb(46, 204, 113))
+                    .bg(Color::Rgb(55, 55, 75))
+                    .add_modifier(Modifier::BOLD),
+            ));
+            right_spans.push(Span::styled(
+                "",
+                Style::default().fg(Color::Rgb(40, 40, 55)).bg(Color::Rgb(55, 55, 75)),
+            ));
+            right_spans.push(Span::styled(
+                format!("  {} ", ctx.total_files),
+                Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(40, 40, 55)),
+            ));
+        }
+
+        if w >= 120 {
+            let last_bg = Color::Rgb(40, 40, 55);
+            right_spans
+                .push(Span::styled("", Style::default().fg(Color::Rgb(25, 25, 35)).bg(last_bg)));
+            right_spans.push(Span::styled(
+                " © 2026 Antonin Nivoche ",
+                Style::default().fg(Palette::TEXT_MUTED).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                " ",
+                Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                " ",
+                Style::default().fg(Color::Rgb(0, 119, 181)).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                "",
+                Style::default().fg(Palette::BORDER_DARK).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
                 " ? Help ",
                 Style::default()
                     .fg(Color::Rgb(10, 10, 15))
                     .bg(Palette::BORDER_DARK)
                     .add_modifier(Modifier::BOLD),
-            ),
-        ]);
+            ));
+        } else if w >= 85 {
+            let last_bg =
+                if right_spans.is_empty() { Palette::BG_DARK } else { Color::Rgb(40, 40, 55) };
+            right_spans
+                .push(Span::styled("", Style::default().fg(Color::Rgb(25, 25, 35)).bg(last_bg)));
+            right_spans.push(Span::styled(
+                " © Antonin Nvh ",
+                Style::default().fg(Palette::TEXT_MUTED).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                " ",
+                Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                " ",
+                Style::default().fg(Color::Rgb(0, 119, 181)).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                "",
+                Style::default().fg(Palette::BORDER_DARK).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                " ? ",
+                Style::default()
+                    .fg(Color::Rgb(10, 10, 15))
+                    .bg(Palette::BORDER_DARK)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        } else if w >= 50 {
+            let last_bg =
+                if right_spans.is_empty() { Palette::BG_DARK } else { Color::Rgb(40, 40, 55) };
+            right_spans
+                .push(Span::styled("", Style::default().fg(Color::Rgb(25, 25, 35)).bg(last_bg)));
+            right_spans.push(Span::styled(
+                "  ",
+                Style::default().fg(Palette::TEXT_BRIGHT).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                " ",
+                Style::default().fg(Color::Rgb(0, 119, 181)).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                "",
+                Style::default().fg(Palette::BORDER_DARK).bg(Color::Rgb(25, 25, 35)),
+            ));
+            right_spans.push(Span::styled(
+                " ? ",
+                Style::default()
+                    .fg(Color::Rgb(10, 10, 15))
+                    .bg(Palette::BORDER_DARK)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
+
+        let right_content = Line::from(right_spans);
+
+        let left_pct = if w < 80 { 100 } else { 55 };
+        let right_pct = 100 - left_pct;
 
         let layout_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .constraints([Constraint::Percentage(left_pct), Constraint::Percentage(right_pct)])
             .split(area);
 
         f.render_widget(
             Paragraph::new(left_content).alignment(ratatui::layout::Alignment::Left),
             layout_chunks[0],
         );
-        f.render_widget(
-            Paragraph::new(right_content).alignment(ratatui::layout::Alignment::Right),
-            layout_chunks[1],
-        );
+        if right_pct > 0 {
+            f.render_widget(
+                Paragraph::new(right_content).alignment(ratatui::layout::Alignment::Right),
+                layout_chunks[1],
+            );
+        }
     }
 }

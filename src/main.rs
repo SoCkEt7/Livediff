@@ -893,14 +893,167 @@ async fn main() -> Result<()> {
                         }
                         _ => {}
                     }
+                } else if ui_state.command_palette_visible {
+                    let filtered_cmds =
+                        crate::domain::command_palette::CommandPaletteEngine::filter_commands(
+                            &ui_state.command_palette_query,
+                        );
+                    match code {
+                        crossterm::event::KeyCode::Esc => {
+                            ui_state.hide_all_popups();
+                        }
+                        crossterm::event::KeyCode::Up | crossterm::event::KeyCode::Char('k') => {
+                            ui_state.command_palette_prev();
+                        }
+                        crossterm::event::KeyCode::Down | crossterm::event::KeyCode::Char('j') => {
+                            ui_state.command_palette_next(filtered_cmds.len());
+                        }
+                        crossterm::event::KeyCode::Backspace => {
+                            ui_state.command_palette_input_backspace();
+                        }
+                        crossterm::event::KeyCode::Enter => {
+                            if let Some(cmd) = filtered_cmds.get(ui_state.command_palette_selected)
+                            {
+                                let action = cmd.action;
+                                ui_state.hide_all_popups();
+                                match action {
+                                    crate::domain::command_palette::CommandAction::ToggleViewMode => {
+                                        ui_state.toggle_view_mode();
+                                    }
+                                    crate::domain::command_palette::CommandAction::JumpNextHunk => {
+                                        ui_state.jump_next_hunk();
+                                    }
+                                    crate::domain::command_palette::CommandAction::JumpPrevHunk => {
+                                        ui_state.jump_prev_hunk();
+                                    }
+                                    crate::domain::command_palette::CommandAction::ToggleFold => {
+                                        ui_state.toggle_context_folding(&domain);
+                                    }
+                                    crate::domain::command_palette::CommandAction::SearchInDiff => {
+                                        ui_state.diff_search_active = true;
+                                    }
+                                    crate::domain::command_palette::CommandAction::OpenSymbols => {
+                                        ui_state.toggle_symbol_inspector();
+                                    }
+                                    crate::domain::command_palette::CommandAction::FilterFiles => {
+                                        ui_state.filter_active = true;
+                                    }
+                                    crate::domain::command_palette::CommandAction::YankPatch => {
+                                        let _ = ui_state.yank_current_patch(&domain);
+                                    }
+                                    crate::domain::command_palette::CommandAction::ExportPatch => {
+                                        let _ = ui_state.export_current_patch(&domain, &canonical_path);
+                                    }
+                                    crate::domain::command_palette::CommandAction::CycleTheme => {
+                                        ui_state.cycle_theme();
+                                    }
+                                    crate::domain::command_palette::CommandAction::ToggleWrap => {
+                                        ui_state.toggle_wrap_lines();
+                                    }
+                                    crate::domain::command_palette::CommandAction::ToggleWhitespace => {
+                                        ui_state.toggle_ignore_whitespace(&domain);
+                                    }
+                                    crate::domain::command_palette::CommandAction::ManageIgnores => {
+                                        ui_state.toggle_ignore_menu(&domain);
+                                    }
+                                    crate::domain::command_palette::CommandAction::ClearTracked => {
+                                        ui_state.clear_all(&mut domain);
+                                    }
+                                    crate::domain::command_palette::CommandAction::ReloadIgnores => {
+                                        if let Ok(mut engine) = ignore_engine_arc.write() {
+                                            engine.ignore_list.clear();
+                                            let warnings = engine.load_vcs_ignores(&canonical_path);
+                                            ui_state.add_log("Reloaded ignore configuration.".to_string());
+                                            ui_state.add_notification(
+                                                "Reloaded ignore cfg".to_string(),
+                                                app::ToastKind::Success,
+                                            );
+                                            for warning in warnings {
+                                                ui_state.add_log(warning);
+                                            }
+                                        }
+                                    }
+                                    crate::domain::command_palette::CommandAction::OpenEditor => {
+                                        let selected_path = {
+                                            let visible_mods = ui_state.get_visible_modifications(&domain);
+                                            visible_mods.get(ui_state.selected_index).map(|m| m.path.clone())
+                                        };
+                                        if let Some(path) = selected_path {
+                                            let full_path = canonical_path.join(&path);
+                                            if let Ok(content) = std::fs::read_to_string(&full_path) {
+                                                let extension = std::path::Path::new(&path)
+                                                    .extension()
+                                                    .and_then(|ext| ext.to_str())
+                                                    .unwrap_or("txt");
+                                                if let Ok(editor) = ratatui_code_editor::editor::Editor::new(
+                                                    extension,
+                                                    &content,
+                                                    ratatui_code_editor::theme::vesper(),
+                                                ) {
+                                                    ui_state.editor_instance = Some(Box::new(editor));
+                                                    ui_state.editor_file_path = Some(path.clone());
+                                                    ui_state.show_popup(app::PopupKind::Editor);
+                                                    ui_state.editor_has_changes = false;
+                                                    ui_state.hide_save_prompt();
+                                                    ui_state.add_log(format!("Opened {} in editor", path));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    crate::domain::command_palette::CommandAction::HelpMenu => {
+                                        ui_state.show_popup(app::PopupKind::Help);
+                                    }
+                                    crate::domain::command_palette::CommandAction::SettingsMenu => {
+                                        ui_state.show_popup(app::PopupKind::Settings);
+                                    }
+                                    crate::domain::command_palette::CommandAction::Quit => {
+                                        ui_state.should_quit = true;
+                                    }
+                                }
+                            }
+                        }
+                        crossterm::event::KeyCode::Char(c) => {
+                            ui_state.command_palette_input_char(c);
+                        }
+                        _ => {}
+                    }
                 } else if ui_state.help_visible {
-                    if code == crossterm::event::KeyCode::Char('?')
-                        || code == crossterm::event::KeyCode::Esc
-                    {
-                        ui_state.hide_all_popups();
+                    match code {
+                        crossterm::event::KeyCode::Char('?') | crossterm::event::KeyCode::Esc => {
+                            ui_state.hide_all_popups();
+                        }
+                        crossterm::event::KeyCode::Tab
+                        | crossterm::event::KeyCode::Right
+                        | crossterm::event::KeyCode::Char('l') => {
+                            ui_state.help_next_tab();
+                        }
+                        crossterm::event::KeyCode::Left | crossterm::event::KeyCode::Char('h') => {
+                            ui_state.help_prev_tab();
+                        }
+                        crossterm::event::KeyCode::Char('1') => {
+                            ui_state.help_tab = 0;
+                        }
+                        crossterm::event::KeyCode::Char('2') => {
+                            ui_state.help_tab = 1;
+                        }
+                        crossterm::event::KeyCode::Char('3') => {
+                            ui_state.help_tab = 2;
+                        }
+                        crossterm::event::KeyCode::Char('4') => {
+                            ui_state.help_tab = 3;
+                        }
+                        _ => {}
                     }
                 } else {
                     match code {
+                        crossterm::event::KeyCode::Char('p')
+                            if modifiers.contains(crossterm::event::KeyModifiers::CONTROL) =>
+                        {
+                            ui_state.toggle_command_palette();
+                        }
+                        crossterm::event::KeyCode::Char(':') => {
+                            ui_state.toggle_command_palette();
+                        }
                         crossterm::event::KeyCode::Char('f')
                             if modifiers.contains(crossterm::event::KeyModifiers::CONTROL) =>
                         {

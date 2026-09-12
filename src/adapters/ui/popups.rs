@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Nyxia. All rights reserved.
+// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
 
 use ratatui::{
     Frame,
@@ -15,6 +15,7 @@ use crate::app::{MonitorDomain, TerminalUiState};
 pub enum PopupComponent {
     GeneralMenu,
     Help,
+    CommandPalette,
     IgnoreMenu,
     IgnoreInput,
     CodeEditor,
@@ -30,7 +31,8 @@ impl Component for PopupComponent {
     fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut Self::State, _ctx: &Self::Context) {
         let (width, height) = match self {
             PopupComponent::GeneralMenu => (Constraint::Length(42), Constraint::Length(16)),
-            PopupComponent::Help => (Constraint::Percentage(60), Constraint::Percentage(65)),
+            PopupComponent::Help => (Constraint::Percentage(75), Constraint::Percentage(75)),
+            PopupComponent::CommandPalette => (Constraint::Percentage(65), Constraint::Length(16)),
             PopupComponent::IgnoreMenu => (Constraint::Length(45), Constraint::Length(17)),
             PopupComponent::IgnoreInput => (Constraint::Length(60), Constraint::Length(8)),
             PopupComponent::CodeEditor => (Constraint::Percentage(80), Constraint::Percentage(80)),
@@ -52,7 +54,8 @@ impl Component for PopupComponent {
 
             match self {
                 PopupComponent::GeneralMenu => draw_general_menu(f, popup_area, state),
-                PopupComponent::Help => draw_help(f, popup_area),
+                PopupComponent::Help => draw_help(f, popup_area, state),
+                PopupComponent::CommandPalette => draw_command_palette(f, popup_area, state),
                 PopupComponent::IgnoreMenu => draw_ignore_menu(f, popup_area, state),
                 PopupComponent::IgnoreInput => draw_ignore_input(f, popup_area, state),
                 PopupComponent::CodeEditor => draw_code_editor(f, popup_area, state),
@@ -264,7 +267,7 @@ fn draw_general_menu(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {
         .block(
             Block::default()
                 .title(Span::styled(
-                    " ☰ LIVEDIF NAVIGATION MENU ",
+                    " ☰ LIVEDIFF NAVIGATION MENU ",
                     Style::default().add_modifier(Modifier::BOLD).fg(Palette::PRIMARY),
                 ))
                 .borders(Borders::ALL)
@@ -276,118 +279,400 @@ fn draw_general_menu(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {
     f.render_widget(list, area);
 }
 
-fn draw_help(f: &mut Frame<'_>, area: Rect) {
-    let help_content = vec![
-        Line::from(vec![Span::styled(
-            " ◈ Livediff Help Menu ",
-            Style::default().add_modifier(Modifier::BOLD).fg(Palette::PRIMARY),
-        )]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  Up/Down, k/j   ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Select file in recent changes"),
-        ]),
-        Line::from(vec![
-            Span::styled("  v / Tab        ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Toggle Unified / Side-by-Side Split view"),
-        ]),
-        Line::from(vec![
-            Span::styled("  /              ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Interactive search / filter files"),
-        ]),
-        Line::from(vec![
-            Span::styled("  Ctrl+F         ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Search text / regex inside current diff"),
-        ]),
-        Line::from(vec![
-            Span::styled("  o / O          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Open AST symbol inspector (functions/classes)"),
-        ]),
-        Line::from(vec![
-            Span::styled("  y / Y          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Yank / copy diff patch to system clipboard"),
-        ]),
-        Line::from(vec![
-            Span::styled("  s              ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Export snapshot as .patch file"),
-        ]),
-        Line::from(vec![
-            Span::styled("  t / T          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Cycle color theme (Cyberpunk, Catppuccin, etc.)"),
-        ]),
-        Line::from(vec![
-            Span::styled("  n / p, ] / [   ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Jump to next / previous diff hunk"),
-        ]),
-        Line::from(vec![
-            Span::styled("  f / F          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Toggle context folding (compact vs full file)"),
-        ]),
-        Line::from(vec![
-            Span::styled("  W              ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Toggle diff text soft-wrapping"),
-        ]),
-        Line::from(vec![
-            Span::styled("  w              ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Toggle ignore whitespace in diff"),
-        ]),
-        Line::from(vec![
-            Span::styled("  g / G          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Jump to top / bottom"),
-        ]),
-        Line::from(vec![
-            Span::styled("  e              ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Open selected file in editor"),
-        ]),
-        Line::from(vec![
-            Span::styled("  Left/Right, h/l ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Scroll diff preview horizontally"),
-        ]),
-        Line::from(vec![
-            Span::styled("  PgUp/PgDn      ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Scroll diff preview vertically"),
-        ]),
-        Line::from(vec![
-            Span::styled("  I / i          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Open Ignore Options (Add/Remove)"),
-        ]),
-        Line::from(vec![
-            Span::styled("  C / c          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Clear all tracked changes and logs"),
-        ]),
-        Line::from(vec![
-            Span::styled("  R / r          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Reload ignore configuration files"),
-        ]),
-        Line::from(vec![
-            Span::styled("  + / -          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Increase / decrease update frequency"),
-        ]),
-        Line::from(vec![
-            Span::styled("  ?              ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Toggle help menu"),
-        ]),
-        Line::from(vec![
-            Span::styled("  Q / q          ", Style::default().fg(Color::Rgb(241, 196, 15))),
-            Span::raw(" Quit Livediff"),
-        ]),
-        Line::from(""),
-        Line::from(vec![Span::styled(
-            " Press ESC or ? to close help menu ",
-            Style::default().fg(Palette::TEXT_MUTED),
-        )]),
+fn draw_help(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {
+    let tabs_titles = [
+        " 1. Navigation & View ",
+        " 2. Diff & Hunks ",
+        " 3. Search & Symbols ",
+        " 4. Actions & Config ",
     ];
 
-    let p = Paragraph::new(help_content)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(ratatui::widgets::BorderType::Double)
-                .border_style(Style::default().fg(Palette::PRIMARY)),
-        )
+    let mut tab_spans = Vec::new();
+    for (i, title) in tabs_titles.iter().enumerate() {
+        if i == state.help_tab {
+            tab_spans.push(Span::styled(
+                *title,
+                Style::default().fg(Color::Black).bg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+            ));
+        } else {
+            tab_spans.push(Span::styled(
+                *title,
+                Style::default().fg(Palette::TEXT_MUTED).bg(Palette::BG_DARK),
+            ));
+        }
+        if i < tabs_titles.len() - 1 {
+            tab_spans.push(Span::raw(" "));
+        }
+    }
+
+    let block = Block::default()
+        .title(Span::styled(
+            " ◈ LIVEDIFF HELP & KEYBOARD GUIDE ◈ ",
+            Style::default().add_modifier(Modifier::BOLD).fg(Palette::PRIMARY),
+        ))
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Double)
+        .border_style(Style::default().fg(Palette::PRIMARY))
         .style(Style::default().bg(Palette::BG_DARK));
 
-    f.render_widget(p, area);
+    let inner_area = block.inner(area);
+    f.render_widget(block, area);
+
+    let chunks = Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            Constraint::Length(2), // Tab bar
+            Constraint::Min(8),    // Content
+            Constraint::Length(2), // Footer
+        ])
+        .split(inner_area);
+
+    let tab_bar = Paragraph::new(Line::from(tab_spans));
+    f.render_widget(tab_bar, chunks[0]);
+
+    let content = match state.help_tab {
+        0 => vec![
+            Line::from(Span::styled(
+                "▸ FILE LIST NAVIGATION & LAYOUT",
+                Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    "  Up / Down, k / j ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Select file in tracked recent modifications list",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  g / G            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Jump to top / bottom of current list or buffer",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  PgUp / PgDn      ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Scroll diff preview vertically by page",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  h / l, Left/Right", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Scroll diff preview horizontally (long lines)",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  v / Tab          ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Toggle Unified vs Side-by-Side (Split) diff view mode",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  Mouse Drag       ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Drag center divider between file list and diff view",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+        ],
+        1 => vec![
+            Line::from(Span::styled(
+                "▸ DIFF ENGINE, HUNKS & FOLDING",
+                Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    "  n / p, ] / [     ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Jump to next / previous diff hunk with HUD counter [Hunk i/N]",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  f / F            ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Toggle Smart Context Folding (focus only on modified hunks)",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  W                ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Toggle soft line-wrapping for long changed lines",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  w                ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Toggle ignore whitespace variations (indentation / spaces)",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+        ],
+        2 => vec![
+            Line::from(Span::styled(
+                "▸ IN-DIFF SEARCH & CODE INSPECTION",
+                Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    "  Ctrl+F           ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Open real-time in-diff search bar (Enter: next, N: prev, Esc: clear)",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  o / O            ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Open AST symbol outline inspector (Rust, Python, TS/JS, Go, C/C++)",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  /                ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Filter and fuzzy match tracked files list by substring",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  Ctrl+P / :       ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Open Command Palette for instant keyboard execution",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  e                ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Open active file in embedded modal code editor",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+        ],
+        _ => vec![
+            Line::from(Span::styled(
+                "▸ ACTIONS, THEMES & CONFIGURATION",
+                Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    "  y / Y            ",
+                    Style::default().fg(Color::Rgb(241, 196, 15)).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Yank unified git patch directly to system clipboard",
+                    Style::default().fg(Palette::TEXT_BRIGHT),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  s / S            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Export snapshot as timestamped .patch file",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  t / T            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Cycle theme palette (Cyberpunk, Catppuccin, Tokyo Night, Nord, Gruvbox)",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  i / I            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Open Ignore Options menu & custom pattern builder",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  c / C            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Clear tracked modifications and history",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  r / R            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Reload VCS ignore configurations (.gitignore, .livediffignore)",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  + / -            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled(
+                    "Increase / decrease filesystem polling speed",
+                    Style::default().fg(Palette::TEXT_MUTED),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  q / Q            ", Style::default().fg(Color::Rgb(241, 196, 15))),
+                Span::styled("Quit Livediff", Style::default().fg(Palette::TEXT_MUTED)),
+            ]),
+        ],
+    };
+
+    let p = Paragraph::new(content).style(Style::default().bg(Palette::BG_DARK));
+    f.render_widget(p, chunks[1]);
+
+    let footer_line = Line::from(vec![
+        Span::styled(
+            " [Tab / ← →] ",
+            Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("Switch Tab  ", Style::default().fg(Palette::TEXT_MUTED)),
+        Span::styled("·  ", Style::default().fg(Palette::BORDER_DARK)),
+        Span::styled(
+            " [ESC / ?] ",
+            Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("Close  ", Style::default().fg(Palette::TEXT_MUTED)),
+        Span::styled("·  ", Style::default().fg(Palette::BORDER_DARK)),
+        Span::styled(
+            format!("Livediff v{}  ", env!("CARGO_PKG_VERSION")),
+            Style::default().fg(Palette::TEXT_MUTED),
+        ),
+        Span::styled("·  ", Style::default().fg(Palette::BORDER_DARK)),
+        Span::styled(
+            "© 2026 Antonin Nivoche (@SoCkEt7)  ",
+            Style::default().fg(Palette::TEXT_BRIGHT).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("·  MIT / Apache-2.0", Style::default().fg(Palette::TEXT_MUTED)),
+    ]);
+    let footer_p = Paragraph::new(footer_line)
+        .alignment(ratatui::layout::Alignment::Center)
+        .style(Style::default().bg(Palette::BG_DARK));
+    f.render_widget(footer_p, chunks[2]);
+}
+
+fn draw_command_palette(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {
+    let filtered_cmds = crate::domain::command_palette::CommandPaletteEngine::filter_commands(
+        &state.command_palette_query,
+    );
+
+    let block = Block::default()
+        .title(Span::styled(
+            " ◈ COMMAND PALETTE (Type to search, ↑/↓ Select, ENTER Execute, ESC Close) ◈ ",
+            Style::default().add_modifier(Modifier::BOLD).fg(Palette::PRIMARY),
+        ))
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Double)
+        .border_style(Style::default().fg(Palette::PRIMARY))
+        .style(Style::default().bg(Palette::BG_DARK));
+
+    let inner_area = block.inner(area);
+    f.render_widget(block, area);
+
+    let chunks = Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Search input box
+            Constraint::Min(5),    // Commands list
+        ])
+        .split(inner_area);
+
+    // Prompt input bar
+    let input_line = Line::from(vec![
+        Span::styled(" ❱ ", Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &state.command_palette_query,
+            Style::default().fg(Palette::TEXT_BRIGHT).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "█",
+            Style::default().fg(Palette::PRIMARY).add_modifier(Modifier::RAPID_BLINK),
+        ),
+        Span::raw(" "),
+        Span::styled(
+            format!("({} commands)", filtered_cmds.len()),
+            Style::default().fg(Palette::TEXT_MUTED),
+        ),
+    ]);
+    let input_block = Block::default()
+        .borders(Borders::BOTTOM)
+        .border_style(Style::default().fg(Palette::BORDER_DARK));
+    f.render_widget(Paragraph::new(input_line).block(input_block), chunks[0]);
+
+    if filtered_cmds.is_empty() {
+        let empty_msg = vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                "  No matching command found.",
+                Style::default().fg(Palette::TEXT_MUTED),
+            )),
+        ];
+        f.render_widget(Paragraph::new(empty_msg), chunks[1]);
+        return;
+    }
+
+    let items: Vec<ListItem<'_>> = filtered_cmds
+        .iter()
+        .enumerate()
+        .map(|(i, cmd)| {
+            let is_selected = i == state.command_palette_selected;
+            let style = if is_selected {
+                Style::default().fg(Color::Black).bg(Palette::PRIMARY).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Palette::TEXT_BRIGHT)
+            };
+
+            let category_style = if is_selected {
+                Style::default().fg(Color::Rgb(40, 40, 40))
+            } else {
+                Style::default().fg(Palette::ACCENT)
+            };
+
+            let shortcut_style = if is_selected {
+                Style::default().fg(Color::Rgb(20, 20, 20)).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::Yellow)
+            };
+
+            let line = Line::from(vec![
+                Span::styled(format!(" {:<10} ", cmd.category), category_style),
+                Span::styled(format!("{:<42} ", cmd.title), style),
+                Span::styled(format!(" {:>12} ", cmd.shortcut), shortcut_style),
+            ]);
+            ListItem::new(line).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).style(Style::default().bg(Palette::BG_DARK));
+    f.render_widget(list, chunks[1]);
 }
 
 fn draw_ignore_menu(f: &mut Frame<'_>, area: Rect, state: &TerminalUiState) {

@@ -1,5 +1,6 @@
-// Copyright (c) 2026 Nyxia. All rights reserved.
+// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
 
+pub mod command_palette;
 pub mod config;
 pub mod diff_engine;
 pub mod diff_search;

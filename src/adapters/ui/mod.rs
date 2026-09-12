@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Nyxia. All rights reserved.
+// Copyright (c) 2026 Antonin Nivoche. All rights reserved.
 
 use ratatui::{
     Frame,
@@ -93,35 +93,49 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
         f.area(),
     );
 
-    // Compact layout: header(1) + stats(1) + main(min) + logs(3) + footer(1)
+    let width = f.area().width;
+    let height = f.area().height;
+
+    // Always display all sections (Header, Stats, Main, Logs, Footer)
+    let logs_height = if height < 16 { 2 } else { 3 };
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1), // Header
-            Constraint::Length(1), // Stats bar
-            Constraint::Min(8),    // Main (FileList + DiffView)
-            Constraint::Length(3), // Logs
-            Constraint::Length(1), // Footer
+            Constraint::Length(1),           // Header
+            Constraint::Length(1),           // Stats
+            Constraint::Min(3),              // Main
+            Constraint::Length(logs_height), // Logs
+            Constraint::Length(1),           // Footer
         ])
         .split(f.area());
 
-    ui_state.stats_rect = chunks[1];
-    ui_state.footer_rect = chunks[4];
     ui_state.header_rect = chunks[0];
+    ui_state.stats_rect = chunks[1];
+    let main_chunk = chunks[2];
     ui_state.logs_rect = chunks[3];
+    ui_state.footer_rect = chunks[4];
 
     header::HeaderComponent.draw(f, chunks[0], ui_state, domain);
     stats::StatsComponent.draw(f, chunks[1], ui_state, domain);
 
-    // Main area: sidebar file list + diff preview
-    let file_list_pct = ui_state.file_list_width_pct.clamp(25, 45); // cap sidebar width
+    // Adaptive horizontal layout for Main Area:
+    // When width < 65, show 22% sidebar + 78% diff preview so both are ALWAYS visible
+    let file_list_pct = if width < 65 {
+        22
+    } else if width < 100 {
+        26
+    } else {
+        ui_state.file_list_width_pct.clamp(20, 45)
+    };
+
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Percentage(file_list_pct),
             Constraint::Percentage(100 - file_list_pct),
         ])
-        .split(chunks[2]);
+        .split(main_chunk);
 
     ui_state.file_list_rect = main_chunks[0];
     ui_state.diff_view_rect = main_chunks[1];
@@ -134,6 +148,8 @@ pub fn draw(f: &mut Frame<'_>, ui_state: &mut TerminalUiState, domain: &MonitorD
     // Popups on top
     if ui_state.editor_visible {
         popups::PopupComponent::CodeEditor.draw(f, f.area(), ui_state, domain);
+    } else if ui_state.command_palette_visible {
+        popups::PopupComponent::CommandPalette.draw(f, f.area(), ui_state, domain);
     } else if ui_state.menu_visible {
         popups::PopupComponent::GeneralMenu.draw(f, f.area(), ui_state, domain);
     } else if ui_state.symbol_inspector_visible {

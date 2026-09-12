@@ -147,6 +147,7 @@ impl MonitorDomain {
 pub enum PopupKind {
     Menu,
     Help,
+    CommandPalette,
     IgnoreMenu,
     IgnoreInput,
     Editor,
@@ -200,6 +201,10 @@ pub struct TerminalUiState {
     pub filter_query: String,
     pub filter_cursor_idx: usize,
     pub help_visible: bool,
+    pub help_tab: usize,
+    pub command_palette_visible: bool,
+    pub command_palette_query: String,
+    pub command_palette_selected: usize,
     pub ignore_menu_visible: bool,
     pub ignore_menu_selected: usize,
     pub ignore_menu_options: Vec<String>,
@@ -291,6 +296,10 @@ impl TerminalUiState {
             filter_query: String::new(),
             filter_cursor_idx: 0,
             help_visible: false,
+            help_tab: 0,
+            command_palette_visible: false,
+            command_palette_query: String::new(),
+            command_palette_selected: 0,
             ignore_menu_visible: false,
             ignore_menu_selected: 0,
             ignore_menu_options: Vec::new(),
@@ -389,6 +398,12 @@ impl TerminalUiState {
                 self.help_visible = true;
                 self.overlay_state.open();
             }
+            PopupKind::CommandPalette => {
+                self.command_palette_visible = true;
+                self.command_palette_query.clear();
+                self.command_palette_selected = 0;
+                self.overlay_state.open();
+            }
             PopupKind::IgnoreMenu => {
                 self.ignore_menu_visible = true;
                 self.overlay_state.open();
@@ -419,6 +434,7 @@ impl TerminalUiState {
     pub fn hide_all_popups(&mut self) {
         self.menu_visible = false;
         self.help_visible = false;
+        self.command_palette_visible = false;
         self.ignore_menu_visible = false;
         self.active_ignores_visible = false;
         self.settings_visible = false;
@@ -763,6 +779,49 @@ impl TerminalUiState {
             self.symbol_inspector_visible = true;
             self.symbol_inspector_selected = 0;
             self.overlay_state.open();
+        }
+    }
+
+    pub fn toggle_command_palette(&mut self) {
+        if self.command_palette_visible {
+            self.hide_all_popups();
+        } else {
+            self.hide_all_popups();
+            self.show_popup(PopupKind::CommandPalette);
+        }
+    }
+
+    pub fn command_palette_input_char(&mut self, c: char) {
+        self.command_palette_query.push(c);
+        self.command_palette_selected = 0;
+    }
+
+    pub fn command_palette_input_backspace(&mut self) {
+        self.command_palette_query.pop();
+        self.command_palette_selected = 0;
+    }
+
+    pub fn command_palette_next(&mut self, total: usize) {
+        if total > 0 && self.command_palette_selected + 1 < total {
+            self.command_palette_selected += 1;
+        }
+    }
+
+    pub fn command_palette_prev(&mut self) {
+        if self.command_palette_selected > 0 {
+            self.command_palette_selected -= 1;
+        }
+    }
+
+    pub fn help_next_tab(&mut self) {
+        self.help_tab = (self.help_tab + 1) % 4;
+    }
+
+    pub fn help_prev_tab(&mut self) {
+        if self.help_tab == 0 {
+            self.help_tab = 3;
+        } else {
+            self.help_tab -= 1;
         }
     }
 
