@@ -75,15 +75,9 @@ impl FileMonitor {
                 Err(_) => return paths,
             };
 
-            let mut builder = ignore::WalkBuilder::new(&root_path_clone);
-            builder.hidden(!engine.all); // ignores hidden files if all is false
-            builder.parents(!engine.no_ignore_parent);
-            builder.ignore(!engine.no_ignore);
-            builder.git_ignore(!engine.no_ignore_vcs);
-            builder.git_exclude(!engine.no_ignore_vcs);
-            builder.git_global(!engine.no_ignore_vcs);
-
-            let walker = builder.build();
+            // Same ignore configuration the live event path uses, so the scan
+            // and per-event checks cannot disagree about a file.
+            let walker = engine.walk_builder(&root_path_clone).build();
             for entry in walker.flatten() {
                 let path = entry.path().to_path_buf();
                 if path == root_path_clone {
@@ -248,5 +242,84 @@ impl FileMonitor {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::Event;
+    use crate::domain::ignore_engine::IgnoreEngine;
+    use std::sync::{Arc, RwLock};
+    use tokio::time::{Duration, timeout};
+
+    /// End-to-end guard for the original bug report: a file covered by a
+    /// `.gitignore` in a *subdirectory* was skipped by the initial scan but
+    /// reappeared the moment it was edited, because the live event path only
+    /// consulted the watch root's ignore files.
+    #[tokio::test]
+    async fn nested_gitignore_survives_live_edits() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join(".gitignore"), "*.tmp\n").unwrap();
+        std::fs::write(root.join("src/.gitignore"), "*.log\n").unwrap();
+        std::fs::write(root.join("src/app.rs"), "fn main() {}\n").unwrap();
+        std::fs::write(root.join("src/debug.log"), "line 1\n").unwrap();
+
+        let mut engine = IgnoreEngine::new(false, false, false, false, &[]);
+        engine.load_vcs_ignores(&root);
+
+        let mut rx = FileMonitor::new(WatcherConfig {
+            root_path: root.clone(),
+            max_size: 1024 * 1024,
+            debounce_ms: 25,
+            ignore_engine: Arc::new(RwLock::new(engine)),
+        })
+        .start();
+
+        // Drain the initial scan.
+        let mut scanned = 0usize;
+        while let Ok(Some(event)) = timeout(Duration::from_secs(10), rx.recv()).await {
+            if let Event::Log(msg) = &event
+                && msg.starts_with("Initial scan complete")
+            {
+                scanned = msg
+                    .split_whitespace()
+                    .find_map(|token| token.parse::<usize>().ok())
+                    .expect("scan log should report a file count");
+                break;
+            }
+        }
+        // Only src/app.rs is trackable: src/debug.log is ignored by the nested
+        // rule, and the ignore files themselves are hidden dotfiles.
+        assert_eq!(scanned, 1, "initial scan should track exactly src/app.rs");
+
+        // Touch the ignored file first, then a tracked one as a sync barrier.
+        std::fs::write(root.join("src/debug.log"), "line 1\nline 2\n").unwrap();
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        std::fs::write(root.join("src/app.rs"), "fn main() { println!(); }\n").unwrap();
+
+        let mut changed = Vec::new();
+        // Collect until the tracked edit lands, or the window expires.
+        while let Ok(Some(event)) = timeout(Duration::from_secs(5), rx.recv()).await {
+            if let Event::FileChanged { modification, .. } = event {
+                let path = modification.path.clone();
+                changed.push(path.clone());
+                if path.ends_with("app.rs") {
+                    break;
+                }
+            }
+        }
+
+        assert!(
+            changed.iter().any(|p| p.ends_with("app.rs")),
+            "tracked file must still report changes, got {changed:?}"
+        );
+        assert!(
+            !changed.iter().any(|p| p.ends_with("debug.log")),
+            "file ignored by nested src/.gitignore must not surface on edit, got {changed:?}"
+        );
     }
 }
