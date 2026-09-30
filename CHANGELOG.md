@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Nested Ignore Files**: `.gitignore`, `.livediffignore`, `.ignore`, and `.rgignore` files placed in subdirectories are now respected at any depth, with each file's patterns anchored to its own directory. Previously only the watch root and its parents were read, so a file covered by a nested rule was correctly skipped by the initial scan but reappeared in the diff view as soon as it was modified.
+- **Parent Ignore Pattern Anchoring**: Anchored patterns inherited from a parent `.gitignore` (for example `docs/generated/`) are no longer re-anchored to the watch root. This previously caused files to be over-ignored when monitoring a subdirectory of a repository.
+- **Initial Scan / Live Event Consistency**: The initial directory scan and the live filesystem event path now derive their ignore rules from a single source (`IgnoreEngine::walk_builder`), so a file can no longer be hidden at startup yet reported on change. `.livediffignore` and `.rgignore` are now honoured by the initial scan as well.
+
+### Changed
+- **`--show-hidden`** now only disables the hidden-file filter. It no longer disables ignore-file handling altogether, which previously also surfaced `target/`, `node_modules/`, and `build/` contents.
+- **`--no-ignore`** now disables ignore files during the initial scan in addition to the live event path.
+- **Ignore File Precedence**: `.livediffignore` and `.rgignore` now take precedence over `.gitignore` within the same directory, matching ripgrep conventions.
+- **Ignore Engine Internals**: `IgnoreEngine` now uses the `ignore` crate's hierarchical `IncrementalIgnore` matcher instead of a single flat `Gitignore`. Matchers are cached per directory and are rebuilt on reload (`r`).
+
 ## [3.4.0] - 2026-09-12
 
 ### Added

@@ -1,22 +1,49 @@
 // Copyright (c) 2026 Antonin Nivoche. All rights reserved.
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
-use ignore::gitignore::{Gitignore, GitignoreBuilder};
+use ignore::{IncrementalIgnore, WalkBuilder};
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use tracing::warn;
 
-#[derive(Clone, Debug)]
+/// Ignore-file names that are specific to livediff/ripgrep. `.ignore` is handled
+/// natively by the `ignore` crate via `WalkBuilder::ignore`.
+pub const CUSTOM_IGNORE_FILES: [&str; 2] = [".livediffignore", ".rgignore"];
+
 pub struct IgnoreEngine {
-    pub root_path: Option<std::path::PathBuf>,
+    pub root_path: Option<PathBuf>,
     pub ignore_list: HashSet<String>,
     pub globset: GlobSet,
-    pub gitignore: Gitignore,
+    /// Hierarchical ignore matcher. Unlike a flat `Gitignore`, this resolves
+    /// per-directory ignore files at any depth, so a `.gitignore` in a
+    /// subdirectory applies to that subtree with its patterns anchored to its
+    /// own directory. Matchers are loaded lazily and cached per directory.
+    ///
+    /// `IncrementalIgnore::matched` needs `&mut self`, but callers hold only a
+    /// read lock on the engine, so the matcher carries its own `Mutex`.
+    matcher: Mutex<Option<IncrementalIgnore>>,
     pub no_ignore: bool,
     pub all: bool,
     pub no_ignore_parent: bool,
     pub no_ignore_vcs: bool,
     pub respect_vcs: bool,
     pub ignore_vcs_files: bool,
+}
+
+impl std::fmt::Debug for IgnoreEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IgnoreEngine")
+            .field("root_path", &self.root_path)
+            .field("ignore_list", &self.ignore_list)
+            .field("no_ignore", &self.no_ignore)
+            .field("all", &self.all)
+            .field("no_ignore_parent", &self.no_ignore_parent)
+            .field("no_ignore_vcs", &self.no_ignore_vcs)
+            .field("respect_vcs", &self.respect_vcs)
+            .field("ignore_vcs_files", &self.ignore_vcs_files)
+            .finish_non_exhaustive()
+    }
 }
 
 impl IgnoreEngine {
@@ -31,7 +58,7 @@ impl IgnoreEngine {
             root_path: None,
             ignore_list: HashSet::new(),
             globset: GlobSetBuilder::new().build().unwrap(),
-            gitignore: GitignoreBuilder::new("").build().unwrap(),
+            matcher: Mutex::new(None),
             no_ignore,
             all,
             no_ignore_parent,
@@ -68,68 +95,59 @@ impl IgnoreEngine {
         }
     }
 
+    /// The single source of truth for how ignore files are discovered.
+    ///
+    /// Both the initial directory scan and the live per-event checks are built
+    /// from this, so a file cannot be skipped at startup yet reported on change.
+    pub fn walk_builder(&self, root: &Path) -> WalkBuilder {
+        let mut builder = WalkBuilder::new(root);
+        let use_ignores = !self.no_ignore;
+
+        builder.hidden(!self.all);
+        // livediff monitors plain directories too, not just git checkouts, so
+        // ignore files are honoured even when there is no repository around.
+        builder.require_git(false);
+        builder.parents(use_ignores && !self.no_ignore_parent);
+        builder.ignore(use_ignores);
+        builder.git_ignore(use_ignores && !self.no_ignore_vcs);
+        builder.git_exclude(use_ignores && !self.no_ignore_vcs);
+        builder.git_global(use_ignores && !self.no_ignore_vcs);
+
+        if use_ignores {
+            for name in CUSTOM_IGNORE_FILES {
+                builder.add_custom_ignore_filename(name);
+            }
+        }
+        builder
+    }
+
     pub fn load_vcs_ignores(&mut self, root_path: &Path) -> Vec<String> {
-        let mut warnings = Vec::new();
         let canonical_root = root_path.canonicalize().unwrap_or_else(|_| root_path.to_path_buf());
         self.root_path = Some(canonical_root.clone());
 
-        if self.no_ignore || self.all {
-            return warnings;
+        if self.no_ignore {
+            *self.matcher.lock().unwrap_or_else(|e| e.into_inner()) = None;
+            return Vec::new();
         }
 
-        let mut ignore_builder = GitignoreBuilder::new(&canonical_root);
-        let mut ignore_names = vec![".livediffignore", ".ignore", ".rgignore"];
-        if !self.no_ignore_vcs {
-            ignore_names.push(".gitignore");
+        // `build_matchers` yields one matcher per configured root; we only ever
+        // configure the watch root.
+        let matcher = self.walk_builder(&canonical_root).build_matchers().into_iter().next();
+        if matcher.is_none() {
+            return vec![format!(
+                "Warning: could not build ignore matcher for {}",
+                canonical_root.display()
+            )];
         }
+        *self.matcher.lock().unwrap_or_else(|e| e.into_inner()) = matcher;
 
-        let mut found_git = false;
-        for ancestor in canonical_root.ancestors() {
-            if self.no_ignore_parent && ancestor != canonical_root.as_path() {
-                break;
-            }
-            for ignore_name in &ignore_names {
-                let ignore_path = ancestor.join(ignore_name);
-                if ignore_path.exists()
-                    && let Some(err) = ignore_builder.add(&ignore_path)
-                {
-                    warnings.push(format!(
-                        "Warning: Failed to load {}: {}",
-                        ignore_path.display(),
-                        err
-                    ));
-                }
-            }
-            if ancestor.join(".git").is_dir() {
-                found_git = true;
-                break;
-            }
-        }
-
-        if !found_git {
-            let mut local_ignore_builder = GitignoreBuilder::new(&canonical_root);
-            for ignore_name in &ignore_names {
-                let local_ignore_path = canonical_root.join(ignore_name);
-                if local_ignore_path.exists() {
-                    let _ = local_ignore_builder.add(&local_ignore_path);
-                }
-            }
-            if let Ok(gi) = local_ignore_builder.build() {
-                self.gitignore = gi;
-            }
-        } else {
-            if let Ok(gi) = ignore_builder.build() {
-                self.gitignore = gi;
-            }
-        }
-
-        warnings
+        Vec::new()
     }
 
     pub fn is_ignored(&self, path: &Path, relative_path: &Path, is_dir: bool) -> bool {
-        // Quick first-pass ignore for dot directories and common build dirs
-        // for performance and to avoid watching our own artifacts.
-        if !self.all {
+        // Quick first-pass ignore for common build dirs, for performance and to
+        // avoid watching our own artifacts. `--no-ignore` opts out of it.
+        if !self.no_ignore {
             let path_str = relative_path.to_string_lossy();
             if path_str.contains(".git/")
                 || path_str.contains("node_modules/")
@@ -138,10 +156,11 @@ impl IgnoreEngine {
             {
                 return true;
             }
+        }
 
-            if self.ignore_vcs_files && path_str.ends_with(".gitignore") {
-                return true;
-            }
+        // Explicit user toggle, independent of the ignore-file configuration.
+        if self.ignore_vcs_files && relative_path.to_string_lossy().ends_with(".gitignore") {
+            return true;
         }
 
         // 1. Check custom glob patterns and runtime ignore list
@@ -154,28 +173,30 @@ impl IgnoreEngine {
             return true;
         }
 
-        // 2. Check VCS ignore files (.gitignore, .ignore, etc.)
-        if self.respect_vcs && !self.all {
-            let target_rel = if let Some(root) = &self.root_path {
-                if let Ok(stripped) = relative_path.strip_prefix(root) {
-                    stripped
-                } else if let Ok(stripped) = path.strip_prefix(root) {
-                    stripped
-                } else {
-                    relative_path
-                }
-            } else {
-                relative_path
+        // 2. Check hierarchical ignore files (.gitignore, .livediffignore, ...)
+        //    at every level between the watch root and the file itself.
+        if self.respect_vcs {
+            let mut guard = match self.matcher.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => poisoned.into_inner(),
             };
+            if let Some(matcher) = guard.as_mut() {
+                // `matched` expects a path relative to the matcher root. Try the
+                // absolute path first, then the caller's relative path; anything
+                // outside the root normalizes to `None` and is left alone.
+                let target = matcher.normalize(path).or_else(|| matcher.normalize(relative_path));
 
-            let clean_rel = target_rel.strip_prefix("./").unwrap_or(target_rel);
-            let clean_rel = clean_rel.strip_prefix("/").unwrap_or(clean_rel);
-
-            if !clean_rel.has_root() && !clean_rel.is_absolute() {
-                match self.gitignore.matched_path_or_any_parents(clean_rel, is_dir) {
-                    ignore::Match::Ignore(_) => return true,
-                    ignore::Match::None => {}
-                    ignore::Match::Whitelist(_) => return false,
+                if let Some(target) = target {
+                    let (matched, err) = matcher.matched_with_errors(&target, is_dir);
+                    if let Some(err) = err {
+                        warn!("ignore file error while matching {}: {}", target.display(), err);
+                    }
+                    if matched.is_ignore() {
+                        return true;
+                    }
+                    if matched.is_whitelist() {
+                        return false;
+                    }
                 }
             }
         }
@@ -203,13 +224,18 @@ impl IgnoreEngine {
 mod tests {
     use super::*;
 
+    fn engine_at(root: &Path) -> IgnoreEngine {
+        let mut engine = IgnoreEngine::new(false, false, false, false, &[]);
+        engine.load_vcs_ignores(root);
+        engine
+    }
+
     #[test]
     fn test_gitignored_dir_contents_are_ignored() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(".gitignore"), "ignored_dir/\n").unwrap();
 
-        let mut engine = IgnoreEngine::new(false, false, false, false, &[]);
-        engine.load_vcs_ignores(tmp.path());
+        let engine = engine_at(tmp.path());
 
         // Watch events arrive per file, so a directory rule has to match
         // through the parent chain, not just against the exact path.
@@ -225,8 +251,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(".livediffignore"), "*.secret\ncustom_build/\n").unwrap();
 
-        let mut engine = IgnoreEngine::new(false, false, false, false, &[]);
-        engine.load_vcs_ignores(tmp.path());
+        let engine = engine_at(tmp.path());
 
         let secret = tmp.path().join("keys.secret");
         assert!(engine.is_ignored(&secret, Path::new("keys.secret"), false));
@@ -265,5 +290,115 @@ mod tests {
         let leading_slash = Path::new("/target/debug/app");
         // Custom check without panic
         let _ = engine.is_ignored(leading_slash, leading_slash, false);
+    }
+
+    /// A `.gitignore` in a subdirectory must apply to that subtree. Previously
+    /// only the watch root's ignore files were loaded, so nested rules were
+    /// silently dropped on live file events.
+    #[test]
+    fn test_nested_gitignore_is_respected() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join(".gitignore"), "root_only.log\n").unwrap();
+        std::fs::write(root.join("src/.gitignore"), "*.log\n").unwrap();
+
+        let engine = engine_at(root);
+
+        let nested = root.join("src/debug.log");
+        assert!(
+            engine.is_ignored(&nested, Path::new("src/debug.log"), false),
+            "nested src/.gitignore rule '*.log' must apply"
+        );
+
+        let kept = root.join("src/main.rs");
+        assert!(!engine.is_ignored(&kept, Path::new("src/main.rs"), false));
+
+        let root_rule = root.join("root_only.log");
+        assert!(engine.is_ignored(&root_rule, Path::new("root_only.log"), false));
+    }
+
+    /// A nested negation must be able to re-include a file the root ignored.
+    #[test]
+    fn test_nested_negation_whitelists_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join(".gitignore"), "*.log\n").unwrap();
+        std::fs::write(root.join("src/.gitignore"), "!keep.log\n").unwrap();
+
+        let engine = engine_at(root);
+
+        let kept = root.join("src/keep.log");
+        assert!(
+            !engine.is_ignored(&kept, Path::new("src/keep.log"), false),
+            "nested '!keep.log' must re-include the file"
+        );
+
+        let dropped = root.join("src/other.log");
+        assert!(engine.is_ignored(&dropped, Path::new("src/other.log"), false));
+    }
+
+    /// An anchored pattern in a parent `.gitignore` is relative to the file that
+    /// declares it, not to the watch root. Re-anchoring it caused livediff to
+    /// over-ignore when monitoring a subdirectory of a repository.
+    #[test]
+    fn test_parent_anchored_pattern_is_not_reanchored() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(root.join("src/docs/generated")).unwrap();
+        std::fs::create_dir_all(root.join("docs/generated")).unwrap();
+        std::fs::write(root.join(".gitignore"), "docs/generated/\n").unwrap();
+
+        let watch_root = root.join("src");
+        let engine = engine_at(&watch_root);
+
+        // `docs/generated/` is anchored at the repository root, so a same-named
+        // directory under the watch root is a different path and stays visible.
+        let nested = watch_root.join("docs/generated/x.txt");
+        assert!(
+            !engine.is_ignored(&nested, Path::new("docs/generated/x.txt"), false),
+            "parent pattern must not be re-anchored at the watch root"
+        );
+    }
+
+    /// The initial scan and the live event path must agree on every file.
+    #[test]
+    fn test_scan_and_event_paths_agree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".git")).unwrap();
+        std::fs::create_dir_all(root.join("src/deep")).unwrap();
+        std::fs::write(root.join(".gitignore"), "*.tmp\n").unwrap();
+        std::fs::write(root.join("src/.gitignore"), "*.log\n").unwrap();
+        std::fs::write(root.join("src/deep/.gitignore"), "!important.log\n").unwrap();
+        for f in ["a.tmp", "src/b.log", "src/deep/important.log", "src/deep/c.rs"] {
+            std::fs::write(root.join(f), "x").unwrap();
+        }
+
+        let engine = engine_at(root);
+        let canonical = root.canonicalize().unwrap();
+
+        let mut disagreements = Vec::new();
+        for entry in engine.walk_builder(&canonical).build().flatten() {
+            let path = entry.path();
+            if path == canonical {
+                continue;
+            }
+            let rel = path.strip_prefix(&canonical).unwrap_or(path);
+            let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+            // The walker already excluded ignored files, so anything it yields
+            // must also survive the per-event check.
+            if engine.is_ignored(path, rel, is_dir) {
+                disagreements.push(rel.to_string_lossy().to_string());
+            }
+        }
+        assert!(
+            disagreements.is_empty(),
+            "scan yielded files the event path would drop: {disagreements:?}"
+        );
     }
 }

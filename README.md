@@ -66,7 +66,7 @@ It simulates the TUI, file changes, and real-time diff animations before you ins
 - **Ignore whitespace toggle** — ignore indentation and formatting variations on the fly (`w`).
 - **Character-level diffing** — precise syntax-highlighted token changes using `similar`.
 - **Low idle footprint** — event-driven redraws; no Electron or Node runtime.
-- **Smart ignore engine** — respects `.gitignore`, `.livediffignore`, and accepts custom glob ignore patterns.
+- **Smart ignore engine** — respects `.gitignore`, `.livediffignore`, `.ignore`, and `.rgignore` files at any depth (including nested subdirectory rules), and accepts custom glob ignore patterns.
 - **Embedded code editor** — press `e` to quickly tweak files in-place without leaving your terminal.
 
 ## Keyboard Shortcuts
